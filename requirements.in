@@ -1,0 +1,17 @@
+# Top-level dependencies of the rnagrx web project.
+# Edit this file, then regenerate the pinned list with:
+#   uv pip compile requirements.in -o requirements.txt --python-version 3.13
+Django>=5.2,<5.3          # 5.2 is the LTS release (supported until April 2028)
+gunicorn
+celery[redis]
+mysqlclient
+django-environ
+django-htmx
+django-tables2
+django-filter
+django-crispy-forms
+crispy-bootstrap5
+pandas
+numpy
+plotly
+openpyxl

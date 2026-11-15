@@ -1,0 +1,14 @@
+{% extends "misra/base_misra.html" %}
+{% block page_title %}About{% endblock %}
+{% block misra_content %}
+<article class="prose">
+  <p class="eyebrow">About</p>
+  <h1 class="h3">About miSRA</h1>
+  <p>miSRA collects public small-RNA sequencing experiments from the NCBI Sequence Read Archive and processes them
+    all in the same way with sRNAbench: read preprocessing, miRNA and tRNA profiling against miRBase, MirGeneDB
+    and PmiREN, and mapping to the genome and to bacterial and viral sequences. Sample metadata are collected from
+    the submissions and harmonised.</p>
+  <p>miSRA is developed by the bioinformatics group of the University of Granada.</p>
+  <p class="text-secondary small">This text is a placeholder and will be completed (citation, contact, funding).</p>
+</article>
+{% endblock %}

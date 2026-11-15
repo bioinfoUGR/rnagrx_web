@@ -1,0 +1,48 @@
+{% extends "misra/base_misra.html" %}
+{% load humanize %}
+{% block page_title %}Home{% endblock %}
+{% block misra_content %}
+<section class="misra-hero">
+  <h1>miSRA</h1>
+  <p class="lead">Public small-RNA sequencing experiments from the Sequence Read Archive, processed uniformly with
+    sRNAbench. Find experiments by organism, sample, disease or quality, collect them in a cart, and download
+    their metadata and results.</p>
+  {% if stats %}
+  <div class="stat-row">
+    <div><strong>{{ stats.n_experiments|intcomma }}</strong><span>experiments</span></div>
+    <div><strong>{{ stats.n_studies|intcomma }}</strong><span>studies</span></div>
+    <div><strong>{{ stats.n_organisms|intcomma }}</strong><span>organisms</span></div>
+  </div>
+  {% endif %}
+</section>
+
+<div class="row g-4 entry-cards">
+  <div class="col-md-4">
+    <a class="card h-100 entry-card" href="{% url 'misra:browse' %}">
+      <div class="card-body"><h2 class="h5">Browse experiments</h2>
+        <p>Filter all experiments by organism, sample class, tissue, disease, protocol or quality, and pick the ones you need.</p></div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a class="card h-100 entry-card" href="{% url 'misra:browse' %}?tab=studies">
+      <div class="card-body"><h2 class="h5">Browse studies</h2>
+        <p>Start from the research projects: search titles and abstracts, then open the experiments of the studies you choose.</p></div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a class="card h-100 entry-card" href="{% url 'misra:taxonomy' %}">
+      <div class="card-body"><h2 class="h5">Browse by taxonomy</h2>
+        <p>Walk down from kingdom to species and open all experiments of any taxon.</p></div>
+    </a>
+  </div>
+</div>
+
+<form class="quick-search mt-4" method="get" action="{% url 'misra:browse' %}">
+  <label class="form-label fw-semibold" for="home-q">Search all experiments</label>
+  <div class="input-group">
+    <input id="home-q" class="form-control" type="search" name="q" placeholder="e.g. plasma exosome, Parkinson, SRP103227, MCF-7">
+    <button class="btn btn-primary" type="submit">Search</button>
+  </div>
+</form>
+{% if build %}<p class="text-secondary small mt-4">Data as of {{ build.finished_at|date:"j F Y, H:i" }}.</p>{% endif %}
+{% endblock %}

@@ -1,0 +1,37 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Bioinformatics UGR{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'core/site.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <nav class="navbar navbar-expand-md site-nav">
+    <div class="container-fluid">
+      {% block brand %}<a class="navbar-brand" href="{% url 'core:landing' %}">Bioinformatics UGR</a>{% endblock %}
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainnav" aria-controls="mainnav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="mainnav">
+        {% block nav %}{% endblock %}
+      </div>
+    </div>
+  </nav>
+  <div id="toasts" class="toast-area" aria-live="polite"></div>
+  <main class="{% block main_class %}container py-4{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <div class="container-fluid d-flex flex-wrap justify-content-between gap-2">
+      <span>Bioinformatics group · University of Granada</span>
+      <span><a href="{% url 'core:landing' %}">All services</a></span>
+    </div>
+  </footer>
+  <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'django_htmx/htmx-2.min.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

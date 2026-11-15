@@ -1,0 +1,31 @@
+{% extends "misra/base_misra.html" %}
+{% load humanize %}
+{% block page_title %}{{ study.id }}{% endblock %}
+{% block misra_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Study</p>
+    <h1 class="h3"><code>{{ study.id }}</code></h1>
+    <p class="lead mb-0">{{ study.title|default:"(no title)" }}</p>
+  </div>
+  <div class="cart-actions">
+    {% if srow %}
+    <a class="btn btn-sm btn-primary" href="{% url 'misra:browse' %}?{{ browse_params }}">{{ srow.n_experiments|intcomma }} experiment{{ srow.n_experiments|pluralize }} →</a>
+    {% endif %}
+    <a class="btn btn-sm btn-outline-secondary" href="https://www.ncbi.nlm.nih.gov/sra/?term={{ study.id }}" target="_blank" rel="noopener">SRA ↗</a>
+  </div>
+</section>
+<div class="row g-4">
+  <div class="col-lg-8">
+    {% if study.abstract %}<h2 class="h5">Abstract</h2><p class="abstract">{{ study.abstract }}</p>{% endif %}
+  </div>
+  <div class="col-lg-4">
+    <table class="table table-sm kv-table">
+      {% if srow %}<tr><th>Organisms</th><td class="fst-italic">{{ srow.organisms|default:"—" }}</td></tr>{% endif %}
+      <tr><th>PubMed</th><td>{% for p in pubmed %}<a href="https://pubmed.ncbi.nlm.nih.gov/{{ p }}/" target="_blank" rel="noopener">{{ p }}</a>{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td></tr>
+      {% for k, v in grouping.items %}<tr><th>Groups: {{ k|cut:"_" }}</th><td>{{ v|join:", " }}</td></tr>{% endfor %}
+      <tr><th>Processed</th><td>{{ study.completed_at|date:"j M Y"|default:"—" }}</td></tr>
+    </table>
+  </div>
+</div>
+{% endblock %}

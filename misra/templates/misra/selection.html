@@ -1,0 +1,20 @@
+{% extends "misra/base_misra.html" %}
+{% load humanize %}
+{% block page_title %}{{ selection.name|default:"Saved selection" }}{% endblock %}
+{% block main_class %}container-fluid py-3 px-lg-4{% endblock %}
+{% block misra_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Saved selection</p>
+    <h1 class="h3">{{ selection.name|default:"Unnamed selection" }}</h1>
+    <p class="text-secondary small mb-1">{{ selection.n_experiments|intcomma }} experiments · saved {{ selection.created_at|date:"j F Y" }}
+      · permanent link: <code>{{ request.build_absolute_uri }}</code></p>
+    {% if missing %}<p class="small text-warning-emphasis mb-0">{{ missing|intcomma }} of these experiments are no longer in the current miSRA data.</p>{% endif %}
+    {% if selection.description %}<p class="mb-0">{{ selection.description }}</p>{% endif %}
+  </div>
+  <div class="cart-actions">
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'misra:selection_tsv' selection.slug %}">Download metadata (TSV)</a>
+  </div>
+</section>
+<div id="browse">{% include "misra/_browse.html" %}</div>
+{% endblock %}

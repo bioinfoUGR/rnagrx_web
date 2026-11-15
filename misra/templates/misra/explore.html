@@ -1,0 +1,58 @@
+{% extends "misra/base_misra.html" %}
+{% load humanize misra_tags %}
+{% block page_title %}Explore database{% endblock %}
+{% block misra_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Database overview</p>
+    <h1 class="h3">Explore miSRA</h1>
+    {% if build %}<p class="text-secondary small mb-0">Data as of {{ build.finished_at|date:"j F Y, H:i" }}. Click a bar to see those experiments.</p>{% endif %}
+  </div>
+</section>
+{% if stats %}
+<div class="stat-row mb-4">
+  <div><strong>{{ stats.n_experiments|intcomma }}</strong><span>experiments</span></div>
+  <div><strong>{{ stats.n_studies|intcomma }}</strong><span>studies</span></div>
+  <div><strong>{{ stats.n_organisms|intcomma }}</strong><span>organisms</span></div>
+  <div><strong>{{ stats.total_reads|reads }}</strong><span>reads after preprocessing</span></div>
+</div>
+<div class="row g-4">
+  {% for p in panels %}{% if p.items %}
+  <div class="col-lg-6">
+    <article class="chart-panel">
+      <h2 class="h6">{{ p.title }}</h2>
+      {% for i in p.items %}
+      <a class="bar-row" href="{% url 'misra:browse' %}?{{ i.params }}">
+        <span class="bar-label">{{ i.label }}</span>
+        <span class="bar-track"><i style="width: {{ i.pct|floatformat:1 }}%"></i></span>
+        <span class="bar-value">{{ i.count|intcomma }}</span>
+      </a>
+      {% endfor %}
+    </article>
+  </div>
+  {% endif %}{% endfor %}
+  <div class="col-lg-6">
+    <article class="chart-panel">
+      <h2 class="h6">Studies by number of experiments</h2>
+      {% for i in sizes %}
+      <div class="bar-row"><span class="bar-label">{{ i.label }} experiments</span>
+        <span class="bar-track"><i style="width: {{ i.pct|floatformat:1 }}%"></i></span>
+        <span class="bar-value">{{ i.count|intcomma }}</span></div>
+      {% endfor %}
+    </article>
+  </div>
+  <div class="col-lg-6">
+    <article class="chart-panel">
+      <h2 class="h6">How many experiments are annotated</h2>
+      {% for i in annotated %}
+      <div class="bar-row"><span class="bar-label">{{ i.label }}</span>
+        <span class="bar-track"><i style="width: {{ i.pct|floatformat:1 }}%"></i></span>
+        <span class="bar-value">{{ i.pct|floatformat:0 }} %</span></div>
+      {% endfor %}
+    </article>
+  </div>
+</div>
+{% else %}
+<p>The index has not been built yet.</p>
+{% endif %}
+{% endblock %}

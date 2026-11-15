@@ -1,0 +1,2 @@
+{% for name, value in filter_params %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+<input type="hidden" name="scope" value="{{ scope }}">{% if selection %}<input type="hidden" name="sel" value="{{ selection.slug }}">{% endif %}

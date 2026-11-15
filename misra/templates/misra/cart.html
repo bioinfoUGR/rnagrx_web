@@ -1,0 +1,37 @@
+{% extends "misra/base_misra.html" %}
+{% load humanize %}
+{% block page_title %}Cart{% endblock %}
+{% block main_class %}container-fluid py-3 px-lg-4{% endblock %}
+{% block misra_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Your cart</p>
+    <h1 class="h3">{{ cart_total|intcomma }} experiment{{ cart_total|pluralize }}</h1>
+    <p class="text-secondary small mb-0">Kept in this browser for {{ cart_days }} days after its last change.
+      Save it to get a permanent link you can share or reuse.</p>
+  </div>
+  {% if cart_total %}
+  <div class="cart-actions">
+    <form class="save-form" hx-post="{% url 'misra:cart_save' %}" hx-target="#toasts" hx-swap="afterbegin">
+      <input class="form-control form-control-sm" name="name" maxlength="200" placeholder="Name (optional)" aria-label="Selection name">
+      <button class="btn btn-sm btn-primary" type="submit">Save as selection</button>
+    </form>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'misra:cart_tsv' %}">Download metadata (TSV)</a>
+    <button class="btn btn-sm btn-outline-secondary" disabled title="Coming in a later version">Download reads</button>
+    <button class="btn btn-sm btn-outline-secondary" disabled title="Coming in a later version">Expression matrix</button>
+    <button class="btn btn-sm btn-outline-secondary" disabled title="Coming in a later version">Profile with sRNAbench</button>
+    <button class="btn btn-sm btn-outline-danger" hx-post="{% url 'misra:cart_clear' %}" hx-target="#toasts" hx-swap="afterbegin"
+            hx-confirm="Remove all {{ cart_total|intcomma }} experiments from the cart?">Empty cart</button>
+  </div>
+  {% endif %}
+</section>
+{% if cart_total %}
+<p class="small text-secondary">Filter the cart like the main table, then remove what you don't need, or keep only what matches.</p>
+<div id="browse">{% include "misra/_browse.html" %}</div>
+{% else %}
+<div class="no-results">
+  <h2 class="h5">The cart is empty.</h2>
+  <p><a href="{% url 'misra:browse' %}">Browse experiments</a> and use “Add … to cart”.</p>
+</div>
+{% endif %}
+{% endblock %}

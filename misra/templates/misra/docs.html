@@ -1,0 +1,39 @@
+{% extends "misra/base_misra.html" %}
+{% load humanize %}
+{% block page_title %}Help{% endblock %}
+{% block misra_content %}
+<article class="prose">
+  <p class="eyebrow">Help</p>
+  <h1 class="h3">How to find and select experiments</h1>
+
+  <h2 class="h5">Three ways in</h2>
+  <ul>
+    <li><b>Browse</b> shows all experiments in a table. The filters on the left narrow the table down.</li>
+    <li>The <b>Studies</b> tab shows the same filtered experiments grouped by study. Tick studies and use
+      “Show experiments of ticked studies”, or add their matching experiments to the cart directly.</li>
+    <li><b>By taxonomy</b> lets you walk from kingdom down to organism and open all experiments of a taxon.</li>
+  </ul>
+
+  <h2 class="h5">Filters</h2>
+  <ul>
+    <li>Ticking several values in one filter finds experiments with <i>any</i> of them (OR).
+      Values in different filters must all apply (AND).</li>
+    <li>The number next to each value is how many experiments you get if you tick it, given your other filters.</li>
+    <li>“not annotated” finds experiments where the value is unknown.</li>
+    <li>The search box looks for all words (at least 3 letters, prefixes allowed) in the experiment's metadata,
+      its study title and abstract, and in accessions (e.g. <code>SRP103227</code>).</li>
+    <li>Every filtered view has its own address: bookmark it or send the link to a colleague.</li>
+  </ul>
+
+  <h2 class="h5">The cart</h2>
+  <ul>
+    <li>Tick rows and use “Add ticked to cart”, or “Add all … matching to cart” for everything the filters match,
+      across all pages. The cart holds up to {{ cart_limit|intcomma }} experiments.</li>
+    <li>The cart is linked to your browser and kept for {{ cart_days }} days after its last change.
+      No account is needed.</li>
+    <li>On the cart page you can filter the cart, remove experiments, or keep only the matching ones.</li>
+    <li>“Save as selection” freezes the cart under a permanent link that you can share, cite or open later.</li>
+    <li>Downloads of reads and expression values, and new analyses with sRNAbench, will be added to the cart page.</li>
+  </ul>
+</article>
+{% endblock %}

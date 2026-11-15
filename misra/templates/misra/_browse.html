@@ -1,0 +1,202 @@
+{% load humanize misra_tags %}
+<div class="browse-layout">
+  {# ------------------------------------------------------------ filters #}
+  <aside class="facet-col">
+    <form id="filters" hx-get="{{ base_url }}" hx-target="#browse" hx-push-url="true"
+          hx-trigger="change[!event.target.matches('.no-submit')], submit" hx-indicator="#busy" hx-sync="this:replace">
+      {% if bq.tab != "experiments" %}<input type="hidden" name="tab" value="{{ bq.tab }}">{% endif %}
+      <label class="form-label fw-semibold small mb-1" for="q">Search</label>
+      <div class="input-group input-group-sm mb-2">
+        <input id="q" class="form-control" type="search" name="q" value="{{ bq.text }}"
+               placeholder="words, accessions…" aria-label="Search experiments and studies">
+        <button class="btn btn-primary" type="submit">Go</button>
+      </div>
+      <p class="facet-help">Ticked values within one filter are combined with OR, different filters with AND.</p>
+
+      {% for f in facets %}
+      {% ifchanged f.def.group %}{% if f.def.group %}<h3 class="facet-group">{{ f.def.group }}</h3>{% endif %}{% endifchanged %}
+      <details class="facet" data-facet="{{ f.def.key }}"{% if f.open %} open{% endif %}>
+        <summary>
+          <span>{{ f.def.label }}</span>
+          {% if f.range %}{% if f.min is not None or f.max is not None %}<span class="facet-active">●</span>{% endif %}
+          {% else %}<span class="facet-n">{{ f.n_values|intcomma }}</span>{% endif %}
+        </summary>
+        {% if f.def.help_text %}<p class="facet-help">{{ f.def.help_text }}</p>{% endif %}
+        {% if f.range %}
+        <div class="facet-range">
+          <input class="form-control form-control-sm" type="number" step="any" min="0" name="min_{{ f.def.key }}"
+                 value="{{ f.min|default_if_none:'' }}" placeholder="min" aria-label="{{ f.def.label }} minimum">
+          <span>–</span>
+          <input class="form-control form-control-sm" type="number" step="any" min="0" name="max_{{ f.def.key }}"
+                 value="{{ f.max|default_if_none:'' }}" placeholder="max" aria-label="{{ f.def.label }} maximum">
+        </div>
+        {% else %}
+        {% if f.more %}
+        <input class="form-control form-control-sm facet-search no-submit" type="search" name="term" form="no-form"
+               placeholder="Search {{ f.def.label|lower }} ({{ f.n_values }} values)"
+               hx-get="{% url 'misra:facet_values' f.def.key %}" hx-include="#filters"
+               hx-vals='{"scope": "{{ scope }}"{% if selection %}, "sel": "{{ selection.slug }}"{% endif %}}'
+               hx-trigger="input changed delay:300ms, focus once" hx-target="next .facet-values" hx-sync="this:replace">
+        {% endif %}
+        <div class="facet-values">{% include "misra/_facet_values.html" with key=f.def.key values=f.values %}</div>
+        {% endif %}
+      </details>
+      {% endfor %}
+    </form>
+  </aside>
+
+  {# ------------------------------------------------------------ results #}
+  <section class="results-col">
+    <div class="results-head">
+      <ul class="nav nav-tabs">
+        <li class="nav-item">
+          <a class="nav-link {% if bq.tab == 'experiments' %}active{% endif %}" href="{{ base_url }}?{{ tab_links.experiments }}"
+             hx-get="{{ base_url }}?{{ tab_links.experiments }}" hx-target="#browse" hx-push-url="true">
+            Experiments <span class="badge text-bg-light">{{ total|intcomma }}</span></a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if bq.tab == 'studies' %}active{% endif %}" href="{{ base_url }}?{{ tab_links.studies }}"
+             hx-get="{{ base_url }}?{{ tab_links.studies }}" hx-target="#browse" hx-push-url="true">
+            Studies <span class="badge text-bg-light">{{ n_studies|intcomma }}</span></a>
+        </li>
+      </ul>
+      <span id="busy" class="htmx-indicator spinner-border spinner-border-sm text-primary" role="status" aria-label="Loading"></span>
+    </div>
+
+    {% if chips %}
+    <div class="chips">
+      {% for c in chips %}
+      <a class="chip" href="{{ base_url }}?{{ c.remove }}" hx-get="{{ base_url }}?{{ c.remove }}" hx-target="#browse"
+         hx-push-url="true" title="Remove this filter"><b>{{ c.label }}:</b> {{ c.value }} <span aria-hidden="true">×</span></a>
+      {% endfor %}
+      <a class="chip chip-clear" href="{{ base_url }}?{{ clear_link }}" hx-get="{{ base_url }}?{{ clear_link }}"
+         hx-target="#browse" hx-push-url="true">Clear all</a>
+    </div>
+    {% endif %}
+
+    {% if bq.tab == "experiments" %}
+    <form id="rowsel" class="selection-form">
+      {% include "misra/_query_hidden.html" %}
+      <div class="action-bar">
+        <span class="small text-secondary"><span data-ticked-count>0</span> ticked</span>
+        {% if scope == "cart" %}
+        <button class="btn btn-sm btn-outline-danger" type="button" name="mode" value="ids" data-needs-ticked disabled
+                hx-post="{% url 'misra:cart_remove' %}" hx-include="#rowsel" hx-target="#toasts" hx-swap="afterbegin">Remove ticked</button>
+        {% if chips %}
+        <button class="btn btn-sm btn-outline-danger" type="button" name="mode" value="query"
+                hx-post="{% url 'misra:cart_remove' %}" hx-include="#rowsel" hx-target="#toasts" hx-swap="afterbegin"
+                hx-confirm="Remove all {{ total|intcomma }} matching experiments from the cart?">Remove all {{ total|intcomma }} matching</button>
+        <button class="btn btn-sm btn-outline-primary" type="button" name="mode" value="query"
+                hx-post="{% url 'misra:cart_keep' %}" hx-include="#rowsel" hx-target="#toasts" hx-swap="afterbegin"
+                hx-confirm="Keep only the {{ total|intcomma }} matching experiments in the cart?">Keep only these {{ total|intcomma }}</button>
+        {% endif %}
+        {% else %}
+        <button class="btn btn-sm btn-outline-primary" type="button" name="mode" value="ids" data-needs-ticked disabled
+                hx-post="{% url 'misra:cart_add' %}" hx-include="#rowsel" hx-target="#toasts" hx-swap="afterbegin">Add ticked to cart</button>
+        <button class="btn btn-sm btn-primary" type="button" name="mode" value="query" {% if not total %}disabled{% endif %}
+                hx-post="{% url 'misra:cart_add' %}" hx-include="#rowsel" hx-target="#toasts" hx-swap="afterbegin"
+                {% if total > 1000 %}hx-confirm="Add all {{ total|intcomma }} matching experiments to the cart?"{% endif %}>
+          Add all {{ total|intcomma }} matching to cart</button>
+        {% endif %}
+      </div>
+
+      {% if rows %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover results-table">
+          <thead><tr>
+            <th><input class="form-check-input" type="checkbox" data-select-all aria-label="Tick all rows on this page"></th>
+            {% include "misra/_sort_th.html" with name="id" label="Experiment" %}
+            {% include "misra/_sort_th.html" with name="study" label="Study" %}
+            {% include "misra/_sort_th.html" with name="organism" label="Organism" %}
+            <th>Sample class</th><th>Tissue</th><th>Cell type / line</th><th>Disease state</th><th>Protocol</th>
+            {% include "misra/_sort_th.html" with name="reads" label="Reads" num=1 %}
+            {% include "misra/_sort_th.html" with name="mirna" label="miRNA %" num=1 %}
+            {% include "misra/_sort_th.html" with name="genome" label="Genome %" num=1 %}
+          </tr></thead>
+          <tbody>
+          {% for r in rows %}
+            <tr>
+              <td><input class="form-check-input row-select" type="checkbox" name="exp" value="{{ r.exp_id }}" aria-label="Tick {{ r.exp_id }}"></td>
+              <td><a href="{% url 'misra:experiment' r.exp_id %}"><code>{{ r.exp_id }}</code></a></td>
+              <td><a href="{% url 'misra:study' r.study %}"><code>{{ r.study }}</code></a></td>
+              <td class="fst-italic">{{ r.organism|na }}</td>
+              <td>{{ r.sample_class|na }}</td>
+              <td>{{ r.tissue|na }}</td>
+              <td>{% if r.cell_type and r.cell_line %}{{ r.cell_type }} / {{ r.cell_line }}{% else %}{{ r.cell_type|default:r.cell_line|na }}{% endif %}</td>
+              <td>{{ r.disease_state|na }}</td>
+              <td>{{ r.protocol|na }}</td>
+              <td class="num">{{ r.read_count|reads }}</td>
+              <td class="num">{{ r.mirna_pct|pct }}</td>
+              <td class="num">{{ r.genome_pct|pct }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </form>
+
+    {% else %}{# studies #}
+    <form id="studysel" class="selection-form" hx-get="{{ base_url }}" hx-target="#browse" hx-push-url="true">
+      {% for name, value in filter_params %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+      <div class="action-bar">
+        <span class="small text-secondary"><span data-ticked-count>0</span> ticked</span>
+        <button class="btn btn-sm btn-outline-primary" type="submit" data-needs-ticked disabled>Show experiments of ticked studies</button>
+        {% if scope == "cart" %}
+        <button class="btn btn-sm btn-outline-danger" type="button" name="mode" value="query" data-needs-ticked disabled
+                hx-post="{% url 'misra:cart_remove' %}" hx-include="#studysel" hx-vals='{"scope": "cart"}'
+                hx-target="#toasts" hx-swap="afterbegin">Remove their matching experiments</button>
+        {% else %}
+        <button class="btn btn-sm btn-primary" type="button" name="mode" value="query" data-needs-ticked disabled
+                hx-post="{% url 'misra:cart_add' %}" hx-include="#studysel" hx-vals='{"scope": "{{ scope }}"{% if selection %}, "sel": "{{ selection.slug }}"{% endif %}}'
+                hx-target="#toasts" hx-swap="afterbegin">Add their matching experiments to cart</button>
+        {% endif %}
+      </div>
+      {% if rows %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover results-table">
+          <thead><tr>
+            <th><input class="form-check-input" type="checkbox" data-select-all aria-label="Tick all rows on this page"></th>
+            {% include "misra/_sort_th.html" with name="id" label="Study" %}
+            <th>Title</th><th>Organisms</th>
+            {% include "misra/_sort_th.html" with name="matching" label="Matching experiments" num=1 %}
+          </tr></thead>
+          <tbody>
+          {% for s in rows %}
+            <tr>
+              <td><input class="form-check-input row-select" type="checkbox" name="f_study" value="{{ s.study_id }}" aria-label="Tick {{ s.study_id }}"></td>
+              <td><a href="{% url 'misra:study' s.study_id %}"><code>{{ s.study_id }}</code></a></td>
+              <td class="study-title">{{ s.title|default:"—" }}</td>
+              <td class="fst-italic small">{{ s.organisms|na }}</td>
+              <td class="num"><a href="{{ base_url }}?{% for name, value in filter_params %}{{ name|urlencode }}={{ value|urlencode }}&amp;{% endfor %}f_study={{ s.study_id|urlencode }}">{{ s.matching|intcomma }}</a>{% if s.matching != s.total %} <span class="text-secondary">of {{ s.total|intcomma }}</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </form>
+    {% endif %}
+
+    {% if not rows %}
+    <div class="no-results">
+      <h2 class="h5">No {{ bq.tab }} match these filters.</h2>
+      {% if chips %}<p>Remove a filter above, or <a href="{{ base_url }}?{{ clear_link }}">clear all filters</a>.</p>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if n_pages > 1 %}
+    <nav class="d-flex flex-wrap align-items-center gap-3" aria-label="Pages">
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item {% if not prev_link %}disabled{% endif %}"><a class="page-link" {% if prev_link %}href="{{ base_url }}?{{ prev_link }}" hx-get="{{ base_url }}?{{ prev_link }}" hx-target="#browse" hx-push-url="true"{% endif %}>‹</a></li>
+        {% for p, link in page_links %}
+          {% if p %}<li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="{{ base_url }}?{{ link }}" hx-get="{{ base_url }}?{{ link }}" hx-target="#browse" hx-push-url="true">{{ p }}</a></li>
+          {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+        {% endfor %}
+        <li class="page-item {% if not next_link %}disabled{% endif %}"><a class="page-link" {% if next_link %}href="{{ base_url }}?{{ next_link }}" hx-get="{{ base_url }}?{{ next_link }}" hx-target="#browse" hx-push-url="true"{% endif %}>›</a></li>
+      </ul>
+      <span class="small text-secondary">{{ page_size }} per page · {{ n_rows|intcomma }} {{ bq.tab }}</span>
+    </nav>
+    {% endif %}
+  </section>
+</div>

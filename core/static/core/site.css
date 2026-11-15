@@ -1,0 +1,28 @@
+/* Shared look for all services. Bootstrap 5 provides the base. */
+:root {
+  --site-accent: #1f5f8b;
+  --site-accent-soft: #e7f0f7;
+  --site-muted: #5c6670;
+}
+
+body { display: flex; flex-direction: column; min-height: 100vh; background: #f7f8fa; }
+main { flex: 1 0 auto; }
+
+.site-nav { background: #fff; border-bottom: 1px solid #dde2e7; }
+.site-nav .navbar-brand { font-weight: 700; color: var(--site-accent); }
+.site-nav .nav-link.active { color: var(--site-accent); font-weight: 600; }
+
+.site-footer { border-top: 1px solid #dde2e7; background: #fff; padding: .75rem 0; color: var(--site-muted); font-size: .875rem; }
+.site-footer a { color: inherit; }
+
+.service-card { border: 1px solid #dde2e7; transition: box-shadow .15s, border-color .15s; color: inherit; }
+.service-card:hover { border-color: var(--site-accent); box-shadow: 0 .25rem .75rem rgba(31, 95, 139, .12); }
+.service-card .stretched-link { color: var(--site-accent); }
+
+.toast-area { position: fixed; top: 4.5rem; right: 1rem; z-index: 1080; display: flex; flex-direction: column; gap: .5rem; }
+.toast-msg { background: #fff; border: 1px solid #dde2e7; border-left: 4px solid var(--site-accent); border-radius: .375rem;
+  padding: .6rem .9rem; box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .08); max-width: 26rem; font-size: .9rem; }
+.toast-msg.warning { border-left-color: #c77700; }
+
+.htmx-indicator { opacity: 0; transition: opacity .2s; }
+.htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }

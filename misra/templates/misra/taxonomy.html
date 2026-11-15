@@ -1,0 +1,30 @@
+{% extends "misra/base_misra.html" %}
+{% load humanize %}
+{% block page_title %}By taxonomy{% endblock %}
+{% block misra_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Browse by taxonomy</p>
+    <h1 class="h3">{% if crumbs %}{% with c=crumbs|last %}{{ c.rank }}: <span class="fst-italic">{{ c.value }}</span>{% endwith %}{% else %}All organisms{% endif %}</h1>
+    <nav class="small" aria-label="Taxonomy path">
+      <a href="{% url 'misra:taxonomy' %}">All</a>
+      {% for c in crumbs %} › <a href="{% url 'misra:taxonomy' %}?{{ c.params }}">{{ c.value }}</a>{% endfor %}
+    </nav>
+  </div>
+  <div class="cart-actions">
+    <a class="btn btn-primary" href="{% url 'misra:browse' %}?{{ browse_params }}">Show these {{ total|intcomma }} experiments →</a>
+  </div>
+</section>
+{% if level_label %}
+<h2 class="h6 text-secondary">{{ level_label }} ({{ children|length }})</h2>
+<div class="taxon-list">
+  {% for c in children %}
+  <div class="taxon-row">
+    {% if c.leaf %}<span class="taxon-name fst-italic">{{ c.value|default:"not assigned" }}</span>
+    {% else %}<a class="taxon-name" href="{% url 'misra:taxonomy' %}?{{ c.params }}">{{ c.value|default:"not assigned" }}</a>{% endif %}
+    <a class="taxon-count" href="{% url 'misra:browse' %}?{{ c.params }}" title="Show these experiments">{{ c.count|intcomma }} experiments →</a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

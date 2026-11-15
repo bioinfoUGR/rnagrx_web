@@ -1,0 +1,66 @@
+{% extends "misra/base_misra.html" %}
+{% load misra_tags humanize %}
+{% block page_title %}{{ exp.id }}{% endblock %}
+{% block misra_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Experiment</p>
+    <h1 class="h3"><code>{{ exp.id }}</code></h1>
+    <p class="mb-0">Study <a href="{% url 'misra:study' exp.study_id %}"><code>{{ exp.study_id }}</code></a>
+      {% if exp.study.title %}· {{ exp.study.title }}{% endif %}</p>
+  </div>
+  <div class="cart-actions">
+    {% if in_cart %}<span class="badge text-bg-success">In your cart</span>{% else %}
+    <form hx-post="{% url 'misra:cart_add' %}" hx-target="#toasts" hx-swap="afterbegin">
+      <input type="hidden" name="mode" value="ids"><input type="hidden" name="exp" value="{{ exp.id }}">
+      <button class="btn btn-sm btn-primary" type="submit">Add to cart</button>
+    </form>{% endif %}
+    <a class="btn btn-sm btn-outline-secondary" href="https://www.ncbi.nlm.nih.gov/sra/{{ exp.id }}" target="_blank" rel="noopener">SRA record ↗</a>
+  </div>
+</section>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <h2 class="h5">Sample</h2>
+    <table class="table table-sm kv-table">
+      {% if row %}
+      <tr><th>Organism</th><td class="fst-italic">{{ row.organism|na }}</td></tr>
+      <tr><th>Taxonomy</th><td class="small">{{ row.tax_kingdom|na }} › {{ row.tax_phylum|na }} › {{ row.tax_class|na }} › {{ row.tax_order|na }} › {{ row.tax_family|na }} › {{ row.tax_genus|na }}</td></tr>
+      {% endif %}
+      <tr><th>Sample class</th><td>{{ exp.sample_class|na }}</td></tr>
+      <tr><th>Primary entity</th><td>{{ exp.primary_entity|na }}</td></tr>
+      <tr><th>Tissue</th><td>{{ exp.tissue|na }}</td></tr>
+      {% for k, v in tags.items %}{% if k != "tissue" and k != "rna_extraction_method" %}
+      <tr><th>{{ k|cut:"_"|capfirst }}</th><td>{{ v }}</td></tr>{% endif %}{% endfor %}
+      {% for k, v in other.items %}<tr><th>{{ k }}</th><td>{{ v }}</td></tr>{% endfor %}
+      <tr><th>From a cancer study</th><td>{{ exp.from_cancer_study|yesno:"yes,no,—" }}</td></tr>
+    </table>
+  </div>
+  <div class="col-lg-6">
+    <h2 class="h5">Library and processing</h2>
+    <table class="table table-sm kv-table">
+      <tr><th>Library protocol (inferred)</th><td>{{ exp.protocol_guess|na }}</td></tr>
+      <tr><th>RNA extraction</th><td>{{ exp.rna_extraction_method|na }}</td></tr>
+      <tr><th>Read layout</th><td>{{ exp.is_paired_end|yesno:"paired-end,single-end,—" }}</td></tr>
+      {% if row %}
+      <tr><th>Raw reads</th><td>{{ row.raw_read_count|reads }}</td></tr>
+      <tr><th>Reads after preprocessing</th><td>{{ row.read_count|reads }}</td></tr>
+      <tr><th>miRNA / tRNA / rRNA reads</th><td>{{ row.mirna_pct|pct }} % / {{ row.trna_pct|pct }} % / {{ row.rrna_pct|pct }} %</td></tr>
+      <tr><th>Mapped to genome / bacteria / virus</th><td>{{ row.genome_pct|pct }} % / {{ row.bacteria_pct|pct }} % / {{ row.virus_pct|pct }} %</td></tr>
+      <tr><th>Processing results</th><td>{{ row.availability|na }}</td></tr>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+<h2 class="h5 mt-3">Files</h2>
+{% if files %}
+<p class="small text-secondary">Downloads will be available here in a later version.</p>
+<div class="table-responsive">
+<table class="table table-sm">
+  <thead><tr><th>Type</th><th>Reference</th><th>Detail</th><th>File</th></tr></thead>
+  <tbody>{% for f in files %}<tr><td>{{ f.file_type }}</td><td>{{ f.db_name|na }}</td><td>{{ f.qualifier|na }}</td><td class="small"><code>{{ f.relative_path }}</code></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% else %}<p class="text-secondary">No files registered.</p>{% endif %}
+{% endblock %}

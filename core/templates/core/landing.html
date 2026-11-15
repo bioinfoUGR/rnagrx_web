@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Bioinformatics UGR · Services{% endblock %}
+{% block content %}
+<section class="py-4">
+  <h1 class="h2">Bioinformatics services</h1>
+  <p class="text-secondary">Web tools and databases from the bioinformatics group of the University of Granada.
+    This page is a placeholder: the full presentation of our services and the group follows soon.</p>
+</section>
+<div class="row g-4">
+  <div class="col-md-6 col-lg-4">
+    <a class="card service-card h-100 text-decoration-none" href="{% url 'misra:home' %}">
+      <div class="card-body">
+        <h2 class="h4 card-title">miSRA</h2>
+        <p class="card-text">Browse thousands of public small-RNA sequencing experiments, processed uniformly
+          with sRNAbench, and select experiments for download and analysis.</p>
+        <span class="stretched-link fw-semibold">Open miSRA →</span>
+      </div>
+    </a>
+  </div>
+</div>
+{% endblock %}

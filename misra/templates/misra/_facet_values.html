@@ -1,0 +1,7 @@
+{% load humanize %}{% for v in values %}
+<label class="facet-option{% if not v.count %} zero{% endif %}">
+  <input class="form-check-input" type="checkbox" name="f_{{ key }}" value="{{ v.value }}"{% if v.selected %} checked{% endif %}>
+  <span class="facet-label{% if not v.value %} fst-italic{% endif %}">{{ v.value|default:"not annotated" }}</span>
+  <span class="facet-count">{{ v.count|intcomma }}</span>
+</label>
+{% empty %}<p class="facet-empty">No values.</p>{% endfor %}

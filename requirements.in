@@ -6,6 +6,7 @@ gunicorn
 celery[redis]
 mysqlclient
 django-environ
+whitenoise
 django-htmx
 django-tables2
 django-filter

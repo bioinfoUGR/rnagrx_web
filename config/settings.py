@@ -109,8 +109,12 @@ SESSION_COOKIE_PATH = (URL_PREFIX or "") + "/"
 CSRF_COOKIE_PATH = SESSION_COOKIE_PATH
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
 SESSION_SAVE_EVERY_REQUEST = False
+# Behind Apache: requests that arrived over HTTPS carry X-Forwarded-Proto: https (set by the dev/prod
+# Apache only for trusted proxies, see deploy/apache/).
 if env.bool("DJANGO_SECURE_PROXY", default=False):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# Cookies only over HTTPS: enable once the site is reached only through HTTPS (production).
+if env.bool("DJANGO_SECURE_COOKIES", default=False):
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 

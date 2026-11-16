@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Page not found{% endblock %}
+{% block content %}
+<div class="py-5 text-center">
+  <h1 class="h3">Page not found</h1>
+  <p class="text-secondary">The address may be mistyped, or the page has moved.</p>
+  <p><a href="{% url 'core:landing' %}">All services</a> · <a href="{% url 'misra:home' %}">miSRA</a></p>
+</div>
+{% endblock %}

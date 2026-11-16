@@ -1,0 +1,94 @@
+{% extends "misra/base_misra.html" %}
+{% load humanize %}
+{% block page_title %}API{% endblock %}
+{% block misra_content %}
+<div class="api-layout">
+  <nav class="api-toc" aria-label="API sections">
+    <p class="eyebrow mb-1">API v1</p>
+    <a href="#basics">Basics</a>
+    <a href="#selecting">Choosing experiments</a>
+    <a href="#output">Output and errors</a>
+    <a href="#examples">Scripts</a>
+    <hr>
+    {% for s in sections %}<a href="#{{ s.e.name }}"><code>{{ s.e.name }}</code></a>{% endfor %}
+  </nav>
+
+  <article class="api-doc">
+    <p class="eyebrow">API</p>
+    <h1 class="h3">miSRA API</h1>
+    <p class="lead">Read miSRA data from your own scripts: experiment metadata, read statistics, expression
+      matrices, the experiments where a miRNA is highest, and more. No registration is needed.</p>
+
+    <section id="basics">
+      <h2 class="h5">Basics</h2>
+      <ul>
+        <li>All endpoints are <code>GET</code> requests below <code>{{ base }}</code>.</li>
+        <li>Parameters go in the URL: <code>{{ base }}expression-matrix?exp=SRX2716515,SRX2716516&amp;format=tsv</code>.
+          Lists are comma-separated.</li>
+        <li>Names of miRNAs and tRNAs are case-sensitive and follow the reference (MirGeneDB: <code>Hsa-Mir-21_5p</code>,
+          miRBase: <code>hsa-miR-21-5p</code>); the <a href="#feature-names">feature-names</a> endpoint lists them.</li>
+        <li>The data are updated with each miSRA build; <a href="#database">database</a> tells the date.</li>
+      </ul>
+    </section>
+
+    <section id="selecting">
+      <h2 class="h5">Choosing experiments</h2>
+      <p>Endpoints marked <span class="badge text-bg-primary">experiments</span> accept these parameters. They can be
+        combined: accessions or a taxon define the set, filters and text narrow it down. Any filtered view of the
+        <a href="{% url 'misra:browse' %}">browse page</a> becomes an API call by copying its query string.</p>
+      {% include "misra/_api_params.html" with params=select_params %}
+    </section>
+
+    <section id="output">
+      <h2 class="h5">Output and errors</h2>
+      {% include "misra/_api_params.html" with params=format_params %}
+      <ul>
+        <li>JSON results include <code>not_found</code> when some accessions you asked for are not in miSRA.</li>
+        <li>Errors come with an HTTP status (400 wrong parameter, 404 not found, 413 too many experiments,
+          429 too many requests) and a JSON body: <code>{"error": "…", "help": "link to this page"}</code>.</li>
+        <li>Limits: expression and seed matrices up to {{ matrix_limit|intcomma }} experiments per request,
+          per-experiment details up to {{ detail_limit|intcomma }}; larger sets with the
+          <a href="{% url 'misra:tool' 'matrix' %}">Expression matrix tool</a>.
+          {% if rate %}At most {{ rate }} requests per minute per address.{% endif %}</li>
+      </ul>
+    </section>
+
+    <section id="examples">
+      <h2 class="h5">From scripts</h2>
+      <p class="mb-1"><b>Shell</b></p>
+<pre class="api-code">curl "{{ base }}top-experiments?feature=Hsa-Mir-122_5p&amp;limit=5"
+curl -o matrix.tsv "{{ base }}expression-matrix?study=SRP103227&amp;value=read_count&amp;format=tsv"</pre>
+      <p class="mb-1"><b>Python</b></p>
+<pre class="api-code">import pandas as pd, requests
+
+api = "{{ base }}"
+# metadata of all female human blood experiments with at least 5 million reads
+exps = pd.read_csv(api + "experiments?organism=Homo sapiens&amp;tissue=blood&amp;sex=female"
+                         "&amp;min_read_count=5000000&amp;format=tsv", sep="\t")
+# their miRNA expression (RPM)
+r = requests.get(api + "expression-matrix", params={"exp": ",".join(exps.exp_id[:500])}).json()
+matrix = pd.DataFrame(r["data"], index=r["features"], columns=r["experiments"])</pre>
+      <p class="mb-1"><b>R</b></p>
+<pre class="api-code">api &lt;- "{{ base }}"
+m &lt;- read.delim(paste0(api, "expression-matrix?study=SRP103227&amp;format=tsv"), row.names = 1)</pre>
+    </section>
+
+    {% for s in sections %}
+    <section id="{{ s.e.name }}" class="api-endpoint">
+      <h2 class="h5"><code>{{ s.e.name }}</code> <span class="text-secondary fw-normal">· {{ s.e.title }}</span>
+        {% if s.e.selects %}<span class="badge text-bg-primary">experiments{% if s.e.selects == "required" %} (required){% endif %}</span>{% endif %}</h2>
+      <p>{{ s.e.summary }}</p>
+      {% if s.e.params %}{% include "misra/_api_params.html" with params=s.e.params %}{% endif %}
+      {% if s.e.formats %}<p class="small text-secondary mb-2">Also: format, download{% if s.e.selects %}, and the parameters for choosing experiments{% endif %}.</p>{% endif %}
+      <p class="mb-1"><b>Returns</b> {{ s.e.returns }}</p>
+      {% if s.examples %}
+      <p class="mb-1"><b>Examples</b></p>
+      <ul class="api-examples">
+        {% for x in s.examples %}<li>{% if x.url %}<a href="{{ x.url }}" target="_blank" rel="noopener"><code>{{ x.label }}</code></a>{% else %}<code>{{ x.label }}</code>{% endif %}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+    {% endfor %}
+  </article>
+</div>
+{% endblock %}

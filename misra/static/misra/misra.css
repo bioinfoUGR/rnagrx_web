@@ -98,3 +98,18 @@ a.bar-row:hover .bar-label { color: var(--site-accent); text-decoration: underli
 .job-log { background: #fff; border: 1px solid #dde2e7; border-radius: .375rem; padding: .6rem .8rem;
   font-size: .78rem; max-height: 22rem; overflow: auto; white-space: pre-wrap; }
 .job-error { white-space: pre-wrap; }
+
+/* API help */
+.api-layout { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 2rem; align-items: start; }
+@media (max-width: 991px) { .api-layout { grid-template-columns: minmax(0, 1fr); } .api-toc { display: none; } }
+.api-toc { position: sticky; top: 1rem; display: flex; flex-direction: column; gap: .15rem; font-size: .85rem;
+  max-height: calc(100vh - 2rem); overflow-y: auto; }
+.api-toc a { text-decoration: none; }
+.api-doc { max-width: 60rem; }
+.api-doc section { margin-top: 2rem; }
+.api-endpoint { border-top: 1px solid #dde2e7; padding-top: 1.25rem; }
+.api-params { background: #fff; font-size: .85rem; }
+.api-params td:first-child { white-space: nowrap; }
+.api-code { background: #fff; border: 1px solid #dde2e7; border-radius: .375rem; padding: .6rem .8rem; font-size: .8rem;
+  white-space: pre-wrap; }
+.api-examples { font-size: .85rem; }

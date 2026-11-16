@@ -27,3 +27,4 @@ MISRA_STORAGE = Path(tempfile.mkdtemp(prefix="misra_storage_test_"))
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_BROKER_URL = "memory://"
 CELERY_RESULT_BACKEND = None
+MISRA_API_RATE_PER_MIN = 0

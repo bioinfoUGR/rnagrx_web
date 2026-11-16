@@ -30,6 +30,8 @@ Layout on each server (dev and prod are the same, except `.env`):
 | CACHE_URL | redis://127.0.0.1:6379/3 | Django cache (optional, this is the default) |
 | MISRA_STORAGE, SCRATCH_DIR, SRNATOOLBOX_DB, SRNATOOLBOX_ENV, ENTREZ_EMAIL | | paths for the services |
 | MISRA_CART_LIMIT | 100000 | optional |
+| MISRA_API_MATRIX_LIMIT, MISRA_API_DETAIL_LIMIT | 2000, 1000 | API: experiments per request (matrices / per-experiment details) |
+| MISRA_API_RATE_PER_MIN | 120 | API requests per minute and client address (0 = no limit) |
 
 ## Update the code and the database
 

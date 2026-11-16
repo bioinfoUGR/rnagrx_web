@@ -1,0 +1,4 @@
+<div class="table-responsive"><table class="table table-sm api-params">
+  <thead><tr><th>Parameter</th><th>Default</th><th>Meaning</th></tr></thead>
+  <tbody>{% for name, default, text in params %}<tr><td><code>{{ name }}</code></td><td class="small">{{ default|default:"—" }}</td><td>{{ text }}</td></tr>{% endfor %}</tbody>
+</table></div>

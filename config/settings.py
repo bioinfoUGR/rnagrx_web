@@ -171,5 +171,9 @@ MISRA_SRNABENCH_META_THREADS = env.int("MISRA_SRNABENCH_META_THREADS", default=4
 MISRA_SRNABENCH_THREADS = env.int("MISRA_SRNABENCH_THREADS", default=2)  # threads per experiment
 MISRA_SRNABENCH_TIMEOUT_HOURS = env.int("MISRA_SRNABENCH_TIMEOUT_HOURS", default=24)
 MISRA_UPLOAD_MAX_MB = env.int("MISRA_UPLOAD_MAX_MB", default=50)
+# API: experiments per request for matrices / per-experiment details, requests per minute and IP (0 = no limit)
+MISRA_API_MATRIX_LIMIT = env.int("MISRA_API_MATRIX_LIMIT", default=2_000)
+MISRA_API_DETAIL_LIMIT = env.int("MISRA_API_DETAIL_LIMIT", default=1_000)
+MISRA_API_RATE_PER_MIN = env.int("MISRA_API_RATE_PER_MIN", default=120)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024

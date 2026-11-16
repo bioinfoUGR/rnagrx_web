@@ -17,6 +17,8 @@ from django.conf import settings
 from django.db import connections
 
 from .export import write_tsv
+from .expression import REFERENCE_BY_TABLE, load_values
+from .expression import matrix as expression_matrix
 
 MATRIX_TABLES = {"mgdb": "MirGeneDB", "mirbase": "miRBase", "pmiren": "PmiREN"}
 MATRIX_VALUES = {"rc": "read count", "rpm_lib": "RPM (library)", "rpm_total": "RPM (total)"}
@@ -44,23 +46,12 @@ def run_matrix(job, directory: Path, log) -> list[dict]:
         raise ValueError("unknown reference database or value")
     ids = job.id_list()
     log(f"Expression matrix: {MATRIX_TABLES[table]}, {MATRIX_VALUES[column]}, {len(ids)} experiments")
-    frames = []
-    with connections["misra"].cursor() as cur:
-        for i, chunk in enumerate(_chunks(ids, CHUNK)):
-            cur.execute(f"SELECT exp_id, mirna_name, {column} FROM {table} WHERE exp_id IN "
-                        f"({', '.join(['%s'] * len(chunk))})", chunk)
-            rows = cur.fetchall()
-            if rows:
-                frames.append(pd.DataFrame(rows, columns=["exp_id", "mirna", "value"]))
-            log(f"read {min((i + 1) * CHUNK, len(ids))} of {len(ids)} experiments")
-    if not frames:
+    data = load_values(REFERENCE_BY_TABLE[table], ids, (column,),
+                       progress=lambda done, total: log(f"read {done} of {total} experiments"))
+    if data.empty:
         raise ValueError(f"None of the experiments has {MATRIX_TABLES[table]} expression values.")
-    data = pd.concat(frames, ignore_index=True)
-    data["value"] = pd.to_numeric(data["value"], errors="coerce").fillna(0)
-    matrix = data.pivot_table(index="mirna", columns="exp_id", values="value", aggfunc="sum", fill_value=0)
-    with_values = [e for e in ids if e in matrix.columns]
-    missing = [e for e in ids if e not in matrix.columns]
-    matrix = matrix[with_values].sort_index()
+    matrix, missing = expression_matrix(data, column, ids)
+    with_values = list(matrix.columns)
     name = f"matrix_{table}_{column}.tsv.gz"
     matrix.to_csv(directory / name, sep="\t", compression="gzip", index_label="miRNA")
     log(f"matrix: {matrix.shape[0]} miRNAs x {matrix.shape[1]} experiments")

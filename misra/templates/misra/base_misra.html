@@ -25,6 +25,7 @@
   </li>
   <li class="nav-item"><a class="nav-link {% if name == 'explore' %}active{% endif %}" href="{% url 'misra:explore' %}">Explore database</a></li>
   <li class="nav-item"><a class="nav-link {% if name == 'docs' %}active{% endif %}" href="{% url 'misra:docs' %}">Help</a></li>
+  <li class="nav-item"><a class="nav-link {% if name == 'api_help' %}active{% endif %}" href="{% url 'misra:api_help' %}">API</a></li>
   <li class="nav-item"><a class="nav-link {% if name == 'about' %}active{% endif %}" href="{% url 'misra:about' %}">About</a></li>
 </ul>
 <a class="btn btn-outline-primary btn-sm cart-button {% if name == 'cart' %}active{% endif %}" href="{% url 'misra:cart' %}">

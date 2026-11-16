@@ -1,6 +1,7 @@
-from django.urls import path
+from django.urls import path, re_path
 
 from . import views, views_tools
+from .api import views as api
 
 app_name = "misra"
 urlpatterns = [
@@ -24,6 +25,10 @@ urlpatterns = [
     path("tools/<slug:key>/", views_tools.tool_view, name="tool"),
     path("job/<str:slug>/", views_tools.job_view, name="job"),
     path("job/<str:slug>/file/<str:name>", views_tools.job_file, name="job_file"),
+    path("api/", api.api_help, name="api_help"),
+    re_path(r"^api/v1/studies/(?P<accession>[A-Za-z0-9]+)/?$", api.studies, name="api_study"),
+    re_path(r"^api/v1/selections/(?P<slug>[A-Za-z0-9_-]+)/?$", api.selections, name="api_selection"),
+    re_path(r"^api/v1/(?P<name>[a-z-]+)/?$", api.dispatch, name="api"),
     path("explore/", views.explore, name="explore"),
     path("about/", views.about, name="about"),
     path("docs/", views.docs, name="docs"),

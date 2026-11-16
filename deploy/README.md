@@ -50,43 +50,20 @@ A new index build is picked up by the running workers within 30 s; no restart is
 ../venv/bin/python manage.py test --settings=config.settings_test misra
 ```
 
-## gunicorn under supervisor (root)
+## gunicorn and Celery under supervisor (root)
 
-`/etc/supervisor/conf.d/rnagrx_web.conf`:
+Both run as www-data; the files are in `deploy/supervisor/`:
 
-```ini
-[program:rnagrx_web]
-command=/var/www/rnagrx/venv/bin/gunicorn -c /var/www/rnagrx/app/deploy/gunicorn/gunicorn.conf.py config.wsgi
-directory=/var/www/rnagrx/app
-user=www-data
-group=www-data
-autostart=true
-autorestart=true
-stopasgroup=true
-killasgroup=true
+```bash
+sudo cp /var/www/rnagrx/app/deploy/supervisor/rnagrx_*.conf /etc/supervisor/conf.d/
+sudo supervisorctl reread && sudo supervisorctl update
+sudo supervisorctl status rnagrx_web rnagrx_celery
 ```
 
-Celery worker for the miSRA tools (`/etc/supervisor/conf.d/rnagrx_celery.conf`). Queues are separate
-from the old site's (different Redis db and queue names):
-
-```ini
-[program:rnagrx_celery]
-command=/var/www/rnagrx/venv/bin/celery -A config worker -Q rnagrx_quick,rnagrx_heavy -c 2 -n rnagrx@%%h --loglevel INFO
-directory=/var/www/rnagrx/app
-user=www-data
-group=www-data
-umask=002
-autostart=true
-autorestart=true
-stopasgroup=true
-killasgroup=true
-stopwaitsecs=600
-stdout_logfile=/var/www/rnagrx/logs/celery_worker.log
-redirect_stderr=true
-```
-
+After a code update: `sudo supervisorctl restart rnagrx_web rnagrx_celery`.
 Job results go to `MISRA_JOB_DIR` (default `/scratch/rnagrx/jobs`) and are removed by `misra_cleanup` after
 `MISRA_JOB_MAX_AGE_DAYS` (14). Per-job limits: `MISRA_LIMIT_MATRIX`, `MISRA_LIMIT_DOWNLOAD`, `MISRA_LIMIT_SRNABENCH`.
+www-data needs write access to `/var/www/rnagrx/logs` and `/scratch/rnagrx/jobs` (group www-data, mode 2775).
 
 ## Apache (root)
 

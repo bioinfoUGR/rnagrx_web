@@ -1,0 +1,54 @@
+{% extends "misra/base_misra.html" %}
+{% load humanize %}
+{% block page_title %}{{ tool.label }}{% endblock %}
+{% block misra_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow"><a href="{% url 'misra:tools' %}">Tools</a></p>
+    <h1 class="h3">{{ tool.title }}</h1>
+    <p class="text-secondary mb-0 prose">{{ tool.description }}</p>
+  </div>
+</section>
+
+{% if not tool.enabled %}
+<div class="no-results"><h2 class="h5">This tool is coming soon.</h2>
+  <p>It will be available again in the next version of miSRA.</p></div>
+{% else %}
+<form method="post" class="tool-form" novalidate>
+  {% csrf_token %}
+  {{ form.source }}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+
+  <h2 class="h6">1. Experiments</h2>
+  {% if source %}
+  <div class="alert alert-info py-2">Using the {{ source_n|intcomma }} experiments of {{ source_label }}.
+    {% if source_n > tool.limit %}<b>This tool accepts at most {{ tool.limit|intcomma }} per job.</b>{% endif %}
+    <a href="{% url 'misra:tool' tool.key %}" class="ms-2">Paste accessions instead</a></div>
+  {% else %}
+  <div class="mb-2">
+    <label class="form-label" for="{{ form.accessions.id_for_label }}">{{ form.accessions.label }}</label>
+    {{ form.accessions }}
+    <div class="form-text">{{ form.accessions.help_text }} At most {{ tool.limit|intcomma }} experiments per job.</div>
+    {% for e in form.accessions.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+  <button class="btn btn-sm btn-outline-secondary" type="button" hx-post="{% url 'misra:check_accessions' %}"
+          hx-include="[name=accessions]" hx-vals='{"tool": "{{ tool.key }}"}' hx-target="#accession-check">Check accessions</button>
+  <div id="accession-check" class="mt-2"></div>
+  {% endif %}
+
+  <h2 class="h6 mt-4">2. Options</h2>
+  <div class="row g-3 tool-options">
+    {% for field in form %}{% if field.name != "accessions" and field.name != "source" %}
+    <div class="col-sm-6 col-lg-4">
+      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+      {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+    {% endif %}{% endfor %}
+  </div>
+
+  <button class="btn btn-primary mt-4" type="submit">Start job</button>
+</form>
+{% endif %}
+{% endblock %}

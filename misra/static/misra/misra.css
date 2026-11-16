@@ -91,3 +91,10 @@ a.bar-row:hover .bar-label { color: var(--site-accent); text-decoration: underli
 .bar-track { background: #eef2f6; border-radius: .25rem; height: .7rem; overflow: hidden; }
 .bar-track i { display: block; height: 100%; background: var(--site-accent); border-radius: .25rem; }
 .bar-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--site-muted); }
+
+/* tools and jobs */
+.tool-form { max-width: 60rem; }
+.disabled-card { opacity: .65; }
+.job-log { background: #fff; border: 1px solid #dde2e7; border-radius: .375rem; padding: .6rem .8rem;
+  font-size: .78rem; max-height: 22rem; overflow: auto; white-space: pre-wrap; }
+.job-error { white-space: pre-wrap; }

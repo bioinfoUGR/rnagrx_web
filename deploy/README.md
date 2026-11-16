@@ -66,6 +66,28 @@ stopasgroup=true
 killasgroup=true
 ```
 
+Celery worker for the miSRA tools (`/etc/supervisor/conf.d/rnagrx_celery.conf`). Queues are separate
+from the old site's (different Redis db and queue names):
+
+```ini
+[program:rnagrx_celery]
+command=/var/www/rnagrx/venv/bin/celery -A config worker -Q rnagrx_quick,rnagrx_heavy -c 2 -n rnagrx@%%h --loglevel INFO
+directory=/var/www/rnagrx/app
+user=www-data
+group=www-data
+umask=002
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+stopwaitsecs=600
+stdout_logfile=/var/www/rnagrx/logs/celery_worker.log
+redirect_stderr=true
+```
+
+Job results go to `MISRA_JOB_DIR` (default `/scratch/rnagrx/jobs`) and are removed by `misra_cleanup` after
+`MISRA_JOB_MAX_AGE_DAYS` (14). Per-job limits: `MISRA_LIMIT_MATRIX`, `MISRA_LIMIT_DOWNLOAD`, `MISRA_LIMIT_SRNABENCH`.
+
 ## Apache (root)
 
 The site prefix is forwarded unchanged; gunicorn strips it (SCRIPT_NAME = URL_PREFIX):

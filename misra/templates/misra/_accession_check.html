@@ -1,0 +1,13 @@
+{% load humanize %}
+{% if res.exp_ids %}
+<div class="alert {% if limit and res.exp_ids|length > limit %}alert-warning{% else %}alert-success{% endif %} py-2 mb-1">
+  <b>{{ res.exp_ids|length|intcomma }} miSRA experiment{{ res.exp_ids|length|pluralize }}</b>
+  ({{ res.n_from_experiments|intcomma }} listed directly{% if res.n_from_studies %}, {{ res.n_from_studies|intcomma }} from studies{% endif %}).
+  {% if limit and res.exp_ids|length > limit %}This tool accepts at most {{ limit|intcomma }} per job.{% endif %}
+</div>
+{% else %}
+<div class="alert alert-warning py-2 mb-1">No miSRA experiments found.</div>
+{% endif %}
+{% if res.unknown_experiments %}<p class="small mb-1">Not in miSRA ({{ res.unknown_experiments|length }}): <code>{{ res.unknown_experiments|slice:":20"|join:" " }}</code>{% if res.unknown_experiments|length > 20 %} …{% endif %}</p>{% endif %}
+{% if res.unknown_studies %}<p class="small mb-1">Studies not in miSRA ({{ res.unknown_studies|length }}): <code>{{ res.unknown_studies|slice:":20"|join:" " }}</code>{% if res.unknown_studies|length > 20 %} …{% endif %}</p>{% endif %}
+{% if res.invalid %}<p class="small mb-1">Not an SRA experiment or study accession ({{ res.invalid|length }}): <code>{{ res.invalid|slice:":20"|join:" " }}</code>{% if res.invalid|length > 20 %} …{% endif %}</p>{% endif %}

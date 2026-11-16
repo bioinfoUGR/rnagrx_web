@@ -1,0 +1,13 @@
+{% extends "misra/base_misra.html" %}
+{% block page_title %}Job {{ job.slug }}{% endblock %}
+{% block misra_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow"><a href="{% url 'misra:tools' %}">Tools</a> · job</p>
+    <h1 class="h3">{{ tool.title|default:job.tool }}</h1>
+    <p class="small text-secondary mb-0">Job <code>{{ job.slug }}</code> · started {{ job.created_at|date:"j F Y, H:i" }} ·
+      bookmark this page to come back later; results are kept for 14 days.</p>
+  </div>
+</section>
+<div id="job-status">{% include "misra/_job_status.html" %}</div>
+{% endblock %}

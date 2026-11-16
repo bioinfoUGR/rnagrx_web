@@ -10,6 +10,19 @@
 <ul class="navbar-nav me-auto">
   <li class="nav-item"><a class="nav-link {% if name == 'browse' %}active{% endif %}" href="{% url 'misra:browse' %}">Browse</a></li>
   <li class="nav-item"><a class="nav-link {% if name == 'taxonomy' %}active{% endif %}" href="{% url 'misra:taxonomy' %}">By taxonomy</a></li>
+  <li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle {% if name == 'tools' or name == 'tool' or name == 'job' %}active{% endif %}" href="{% url 'misra:tools' %}"
+       role="button" data-bs-toggle="dropdown" aria-expanded="false">Tools</a>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item" href="{% url 'misra:tool' 'download' %}">Download reads</a></li>
+      <li><a class="dropdown-item" href="{% url 'misra:tool' 'matrix' %}">Expression matrix</a></li>
+      <li><a class="dropdown-item" href="{% url 'misra:tool' 'mirna' %}">miRNA profiling <span class="badge text-bg-light">soon</span></a></li>
+      <li><a class="dropdown-item" href="{% url 'misra:tool' 'libs' %}">Libs (longer references) <span class="badge text-bg-light">soon</span></a></li>
+      <li><a class="dropdown-item" href="{% url 'misra:tool' 'exact' %}">Exact matches (spike-ins) <span class="badge text-bg-light">soon</span></a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="{% url 'misra:tools' %}">All tools and your jobs</a></li>
+    </ul>
+  </li>
   <li class="nav-item"><a class="nav-link {% if name == 'explore' %}active{% endif %}" href="{% url 'misra:explore' %}">Explore database</a></li>
   <li class="nav-item"><a class="nav-link {% if name == 'docs' %}active{% endif %}" href="{% url 'misra:docs' %}">Help</a></li>
   <li class="nav-item"><a class="nav-link {% if name == 'about' %}active{% endif %}" href="{% url 'misra:about' %}">About</a></li>

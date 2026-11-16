@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import csv
 import math
 from urllib.parse import urlencode
 
@@ -18,6 +17,7 @@ from misradb.models import Experiment, ExperimentAnalysis, ReadFile, Study
 from . import cart as cart_ops
 from .catalog import FIELD_BY_KEY, NUM_KEYS, TAX_RANKS
 from .engine import SORTS, Catalog
+from .export import tsv_lines
 from .index_store import current_build, get_catalog
 from .models import ExperimentRow, FacetDefinition, Selection, StudyRow
 from .query import STUDY_SORTS, TABS, BrowseQuery
@@ -468,25 +468,8 @@ def selection_view(request, slug):
 # ---------------------------------------------------------------------------
 # downloads
 
-TSV_FIELDS = [f.name for f in ExperimentRow._meta.concrete_fields if f.name not in ("search_text", "created_at")]
-
-
-class _Echo:
-    def write(self, value):
-        return value
-
-
 def _tsv_response(ids, filename):
-    def rows():
-        writer = csv.writer(_Echo(), delimiter="\t", lineterminator="\n")
-        yield writer.writerow(TSV_FIELDS)
-        ids_sorted = sorted(ids)
-        for i in range(0, len(ids_sorted), 2000):
-            chunk = ExperimentRow.objects.filter(exp_id__in=ids_sorted[i:i + 2000]).order_by("exp_id")
-            for values in chunk.values_list(*TSV_FIELDS):
-                yield writer.writerow(["" if v is None else (int(v) if isinstance(v, float) and v.is_integer() else v)
-                                       for v in values])
-    response = StreamingHttpResponse(rows(), content_type="text/tab-separated-values; charset=utf-8")
+    response = StreamingHttpResponse(tsv_lines(ids), content_type="text/tab-separated-values; charset=utf-8")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 

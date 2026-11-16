@@ -144,6 +144,9 @@ CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_DEFAULT_QUEUE = "rnagrx_quick"
+CELERY_TASK_IGNORE_RESULT = True  # job state lives in the Job table
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
 # Paths used by the services
 MISRA_STORAGE = Path(env.str("MISRA_STORAGE", default="/shared/misra_storage"))
@@ -157,3 +160,10 @@ MISRA_INDEX_DIR = Path(env.str("MISRA_INDEX_DIR", default=str(SITE_ROOT / "var" 
 MISRA_CART_LIMIT = env.int("MISRA_CART_LIMIT", default=100_000)
 MISRA_CART_MAX_AGE_DAYS = env.int("MISRA_CART_MAX_AGE_DAYS", default=30)
 MISRA_PAGE_SIZE = 50
+
+# miSRA tools (jobs): working directories, retention, and max experiments per job
+MISRA_JOB_DIR = Path(env.str("MISRA_JOB_DIR", default=str(SCRATCH_DIR / "jobs")))
+MISRA_JOB_MAX_AGE_DAYS = env.int("MISRA_JOB_MAX_AGE_DAYS", default=14)
+MISRA_LIMIT_MATRIX = env.int("MISRA_LIMIT_MATRIX", default=20_000)
+MISRA_LIMIT_DOWNLOAD = env.int("MISRA_LIMIT_DOWNLOAD", default=2_000)
+MISRA_LIMIT_SRNABENCH = env.int("MISRA_LIMIT_SRNABENCH", default=500)

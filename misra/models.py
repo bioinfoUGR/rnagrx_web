@@ -1,4 +1,7 @@
 import secrets
+from pathlib import Path
+
+from django.conf import settings
 
 from django.db import models
 from django.urls import reverse
@@ -155,3 +158,43 @@ class Selection(models.Model):
 
     def get_absolute_url(self):
         return reverse("misra:selection", args=[self.slug])
+
+
+class Job(models.Model):
+    """One run of a miSRA tool (expression matrix, read download, sRNAbench profiling)."""
+
+    QUEUED, RUNNING, DONE, FAILED, EXPIRED = "queued", "running", "done", "failed", "expired"
+    STATUSES = [(QUEUED, "waiting"), (RUNNING, "running"), (DONE, "finished"), (FAILED, "failed"),
+                (EXPIRED, "results deleted")]
+
+    slug = models.CharField(max_length=20, unique=True, default=_slug)
+    tool = models.CharField(max_length=20)
+    status = models.CharField(max_length=10, choices=STATUSES, default=QUEUED, db_index=True)
+    params = models.JSONField(default=dict, blank=True)
+    exp_ids = models.TextField(help_text="Accessions separated by spaces")
+    n_experiments = models.PositiveIntegerField(default=0)
+    source = models.CharField(max_length=100, blank=True, help_text="accessions, cart or selection:<slug>")
+    results = models.JSONField(default=list, blank=True, help_text="[{name, label, size}] files in the job directory")
+    message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-id"]
+
+    def __str__(self):
+        return f"{self.tool} {self.slug} ({self.status})"
+
+    def id_list(self) -> list[str]:
+        return self.exp_ids.split()
+
+    def directory(self) -> Path:
+        return Path(settings.MISRA_JOB_DIR) / self.slug
+
+    @property
+    def is_active(self) -> bool:
+        return self.status in (self.QUEUED, self.RUNNING)
+
+    def get_absolute_url(self):
+        return reverse("misra:job", args=[self.slug])

@@ -14,6 +14,8 @@
   </div>
   <div class="cart-actions">
     <a class="btn btn-sm btn-outline-primary" href="{% url 'misra:selection_tsv' selection.slug %}">Download metadata (TSV)</a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'misra:tool' 'download' %}?source=selection:{{ selection.slug }}">Download reads</a>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'misra:tool' 'matrix' %}?source=selection:{{ selection.slug }}">Expression matrix</a>
   </div>
 </section>
 <div id="browse">{% include "misra/_browse.html" %}</div>

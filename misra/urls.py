@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, views_tools
 
 app_name = "misra"
 urlpatterns = [
@@ -19,6 +19,11 @@ urlpatterns = [
     path("cart/metadata.tsv", views.cart_tsv, name="cart_tsv"),
     path("selection/<str:slug>/", views.selection_view, name="selection"),
     path("selection/<str:slug>/metadata.tsv", views.selection_tsv, name="selection_tsv"),
+    path("tools/", views_tools.tools_index, name="tools"),
+    path("tools/check/", views_tools.check_accessions, name="check_accessions"),
+    path("tools/<slug:key>/", views_tools.tool_view, name="tool"),
+    path("job/<str:slug>/", views_tools.job_view, name="job"),
+    path("job/<str:slug>/file/<str:name>", views_tools.job_file, name="job_file"),
     path("explore/", views.explore, name="explore"),
     path("about/", views.about, name="about"),
     path("docs/", views.docs, name="docs"),

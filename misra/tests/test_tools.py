@@ -76,7 +76,7 @@ class ToolJobTests(ToolFixture):
     def test_tools_pages(self):
         self.assertContains(self.client.get(reverse("misra:tools")), "Expression matrix")
         self.assertContains(self.client.get(reverse("misra:tool", args=["matrix"])), "miRNA reference")
-        self.assertContains(self.client.get(reverse("misra:tool", args=["libs"])), "coming soon")
+        self.assertContains(self.client.get(reverse("misra:tool", args=["libs"])), "Reference sequences (FASTA)")
         self.assertContains(self.client.get(reverse("misra:tool", args=["mirna"])), "Mature miRNA sequences")
         self.assertEqual(self.client.get(reverse("misra:tool", args=["nope"])).status_code, 404)
 
@@ -171,14 +171,21 @@ def fake_srnabench(cmd, **kwargs):
         d = out / name
         d.mkdir()
         (d / "reads.fa").write_text(">1#5\nACGT\n")
-        if "--spike_file" in cmd:
+        if "--libs" in cmd:
+            (d / "libs_results").mkdir()
+            table = d / "libs_results" / "hairpin_expression_sense.tsv"
+            res = {"libs": {"hairpin": {"files": {"senseMA": {"name": str(table)}}}}}
+            table.write_text("name\tUR\tRC\tRCadj\tRPM_lib_adj\tRPM_total_adj\n"
+                             f"Hsa-Mir-21_pri\t1\t{10 * (i + 1)}\t{10 * (i + 1)}\t1000\t100\n")
+        elif "--spike_file" in cmd:
             table = d / "spikes_count.tsv"
             res = {"spike_ins": {"spike_ins": {"file": str(table)}}}
         else:
             table = d / "all_mirna_annot.tsv"
             res = {"mirna": {"all_mirna_annot": {"files": {"mature_MA": {"name": str(table)}}}}}
-        table.write_text("name\tUR\tRC\tRCadj\tRPM_lib_adj\tRPM_total_adj\n"
-                         f"Hsa-Mir-21_5p\t1\t{10 * (i + 1)}\t{10 * (i + 1)}\t1000\t100\n")
+        if "--libs" not in cmd:
+            table.write_text("name\tUR\tRC\tRCadj\tRPM_lib_adj\tRPM_total_adj\n"
+                             f"Hsa-Mir-21_5p\t1\t{10 * (i + 1)}\t{10 * (i + 1)}\t1000\t100\n")
         (d / "results.json").write_text(json.dumps({**res, "rc": 1000.0, "ur": 50,
                                                     "preproc": {"raw_reads": 1200.0}}))
         meta.append(f"{f},{name},{f},{d / 'results.json'}")
@@ -259,7 +266,11 @@ class SrnabenchJobTests(ToolFixture):
         self.assertContains(r, "must start with")
         self.assertFalse(Job.objects.exists())
 
-    def test_libs_blocked(self):
-        r = self.client.post(reverse("misra:tool", args=["libs"]), {"accessions": "SRX001"})
-        self.assertContains(r, "coming soon")
-        self.assertFalse(Job.objects.exists())
+    def test_libs_job(self):
+        r, run = self.submit("libs", {"accessions": "SRX001", "mm": 1}, {"libs": HAIRPIN})
+        job = Job.objects.get()
+        self.assertEqual(job.status, Job.DONE, job.message)
+        cmd = [str(c) for c in run.call_args.args[0]]
+        self.assertIn("--libs", cmd)
+        self.assertIn("--nomirna", cmd)
+        self.assertEqual((job.directory() / "matrix_RC.tsv").read_text(), "reference\tSRX001\nHsa-Mir-21_pri\t10\n")

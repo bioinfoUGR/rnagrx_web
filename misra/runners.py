@@ -170,7 +170,7 @@ def _expression_file(mode: str, res: dict, sample_dir: Path) -> Path | None:
     elif mode == "libs":
         section = res.get("libs") or {}
         lib = next(iter(section), None)
-        # by file name: results.json can list the antisense file under "senseMA" (srnatoolbox bug)
+        # by file name, independent of the key names in results.json
         return sample_dir / "libs_results" / f"{lib}_expression_sense.tsv" if lib else None
     else:
         name = ((res.get("spike_ins") or {}).get("spike_ins") or {}).get("file")

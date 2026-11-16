@@ -47,8 +47,7 @@ TOOLS = {t.key: t for t in [
     Tool("libs", "Libs (longer references)", "Profiling against longer reference sequences",
          "Map the reads with sRNAbench against references of 50 to a few hundred bases you provide: "
          "read counts per reference.",
-         LibsForm, "rnagrx_heavy", "MISRA_LIMIT_SRNABENCH", ("mm", "min_rc", "min_len", "max_len"), ("libs",),
-         blocked="Waiting for a fix in sRNAbench: reference libraries are not profiled without miRNA data."),
+         LibsForm, "rnagrx_heavy", "MISRA_LIMIT_SRNABENCH", ("mm", "min_rc", "min_len", "max_len"), ("libs",)),
     Tool("exact", "Exact matches (spike-ins)", "Exact-match profiling",
          "Count reads that match short sequences you provide (typically 18–40 nt, e.g. spike-ins) exactly.",
          ExactForm, "rnagrx_heavy", "MISRA_LIMIT_SRNABENCH", ("min_rc", "min_len", "max_len"), ("spikes",)),

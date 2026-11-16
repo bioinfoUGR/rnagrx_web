@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 from django.conf import settings
 
-from .forms import DownloadForm, MatrixForm
+from .forms import DownloadForm, ExactForm, LibsForm, MatrixForm, MirnaForm
 
 
 @dataclass(frozen=True)
@@ -18,10 +18,12 @@ class Tool:
     queue: str = "rnagrx_quick"
     limit_setting: str = "MISRA_LIMIT_MATRIX"
     params: tuple = field(default=())  # form fields stored in Job.params
+    files: tuple = field(default=())  # FASTA upload fields, saved as input/<field>.fa
+    blocked: str = ""  # reason the tool is temporarily unavailable
 
     @property
     def enabled(self) -> bool:
-        return self.form_class is not None
+        return self.form_class is not None and not self.blocked
 
     @property
     def limit(self) -> int:
@@ -38,9 +40,16 @@ TOOLS = {t.key: t for t in [
          "miSRA profiles against MirGeneDB, miRBase or PmiREN.",
          MatrixForm, "rnagrx_quick", "MISRA_LIMIT_MATRIX", ("db", "value")),
     Tool("mirna", "miRNA profiling", "miRNA profiling with your own annotation",
-         "Profile the experiments with sRNAbench against mature and hairpin sequences you provide."),
+         "Profile the experiments with sRNAbench against mature and hairpin (precursor) miRNA sequences you "
+         "provide, e.g. from MirGeneDB or miRBase, or your own predictions.",
+         MirnaForm, "rnagrx_heavy", "MISRA_LIMIT_SRNABENCH", ("mm", "min_rc", "min_len", "max_len"),
+         ("mature", "hairpin")),
     Tool("libs", "Libs (longer references)", "Profiling against longer reference sequences",
-         "Map the reads against references of 50 to a few hundred bases: counts and per-position coverage."),
+         "Map the reads with sRNAbench against references of 50 to a few hundred bases you provide: "
+         "read counts per reference.",
+         LibsForm, "rnagrx_heavy", "MISRA_LIMIT_SRNABENCH", ("mm", "min_rc", "min_len", "max_len"), ("libs",),
+         blocked="Waiting for a fix in sRNAbench: reference libraries are not profiled without miRNA data."),
     Tool("exact", "Exact matches (spike-ins)", "Exact-match profiling",
-         "Count exact matches of the reads to short sequences (18–40 nt), e.g. spike-ins."),
+         "Count reads that match short sequences you provide (typically 18–40 nt, e.g. spike-ins) exactly.",
+         ExactForm, "rnagrx_heavy", "MISRA_LIMIT_SRNABENCH", ("min_rc", "min_len", "max_len"), ("spikes",)),
 ]}

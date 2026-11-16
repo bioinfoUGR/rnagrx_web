@@ -60,7 +60,7 @@ def tool_view(request, key):
     if source_ids is None:
         source = ""
     if request.method == "POST":
-        form = tool.form_class(request.POST)
+        form = tool.form_class(request.POST, request.FILES)
         if form.is_valid():
             if source_ids is not None:
                 ids = source_ids
@@ -74,10 +74,19 @@ def tool_view(request, key):
                                f"{len(ids):,} experiments: this tool accepts at most {tool.limit:,} per job. "
                                "Please split the list or narrow down your selection.")
             else:
+                params = {k: form.cleaned_data.get(k) for k in tool.params}
+                for key in tool.files:
+                    fasta = form.cleaned_data[key]
+                    params[key] = fasta.describe(fasta.filename)
                 job = Job.objects.create(
                     tool=tool.key, exp_ids=" ".join(ids), n_experiments=len(ids), source=source or "accessions",
-                    params={k: form.cleaned_data.get(k) for k in tool.params},
+                    params=params,
                 )
+                if tool.files:
+                    inputs = job.directory() / "input"
+                    inputs.mkdir(parents=True, exist_ok=True)
+                    for key in tool.files:
+                        (inputs / f"{key}.fa").write_text(form.cleaned_data[key].text())
                 _remember_job(request, job)
                 run_job.apply_async((job.pk,), queue=tool.queue)
                 return redirect(job)

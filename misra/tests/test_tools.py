@@ -1,5 +1,6 @@
 import gzip
 import io
+import json
 import subprocess
 from pathlib import Path
 from unittest import mock
@@ -43,7 +44,9 @@ def fake_srnahelper(cmd, **kwargs):
     return subprocess.CompletedProcess(cmd, 0)
 
 
-class ToolJobTests(TestCase):
+class ToolFixture(TestCase):
+    """Index, misradb2 tables (mgdb, read_files) and one read file; no tests of its own."""
+
     databases = {"default", "misra"}
 
     @classmethod
@@ -68,10 +71,13 @@ class ToolJobTests(TestCase):
     def setUp(self):
         index_store.reset_for_tests()
 
+
+class ToolJobTests(ToolFixture):
     def test_tools_pages(self):
         self.assertContains(self.client.get(reverse("misra:tools")), "Expression matrix")
         self.assertContains(self.client.get(reverse("misra:tool", args=["matrix"])), "miRNA reference")
-        self.assertContains(self.client.get(reverse("misra:tool", args=["mirna"])), "coming soon")
+        self.assertContains(self.client.get(reverse("misra:tool", args=["libs"])), "coming soon")
+        self.assertContains(self.client.get(reverse("misra:tool", args=["mirna"])), "Mature miRNA sequences")
         self.assertEqual(self.client.get(reverse("misra:tool", args=["nope"])).status_code, 404)
 
     def test_check_accessions(self):
@@ -148,3 +154,112 @@ class ToolJobTests(TestCase):
         job.refresh_from_db()
         self.assertEqual(job.status, Job.EXPIRED)
         self.assertFalse(job.directory().exists())
+
+
+def fake_srnabench(cmd, **kwargs):
+    """Stands in for `sRNAhelper ma` and `sRNAbench --samples`, writing output in the real layout."""
+    cmd = [str(c) for c in cmd]
+    if Path(cmd[0]).name == "sRNAhelper":
+        Path(cmd[cmd.index("--outfile") + 1]).write_text("preName\tpreSeq\nHsa-Mir-21_pri\tACGT\n")
+        return subprocess.CompletedProcess(cmd, 0)
+    out = Path(cmd[cmd.index("-o") + 1])
+    out.mkdir(parents=True, exist_ok=True)
+    samples = Path(cmd[cmd.index("--samples") + 1]).read_text().splitlines()[1:]
+    meta = ["file,name,filepath,results"]
+    for i, line in enumerate(samples):
+        f, name = line.split("\t")
+        d = out / name
+        d.mkdir()
+        (d / "reads.fa").write_text(">1#5\nACGT\n")
+        if "--spike_file" in cmd:
+            table = d / "spikes_count.tsv"
+            res = {"spike_ins": {"spike_ins": {"file": str(table)}}}
+        else:
+            table = d / "all_mirna_annot.tsv"
+            res = {"mirna": {"all_mirna_annot": {"files": {"mature_MA": {"name": str(table)}}}}}
+        table.write_text("name\tUR\tRC\tRCadj\tRPM_lib_adj\tRPM_total_adj\n"
+                         f"Hsa-Mir-21_5p\t1\t{10 * (i + 1)}\t{10 * (i + 1)}\t1000\t100\n")
+        (d / "results.json").write_text(json.dumps({**res, "rc": 1000.0, "ur": 50,
+                                                    "preproc": {"raw_reads": 1200.0}}))
+        meta.append(f"{f},{name},{f},{d / 'results.json'}")
+    (out / "meta_results.csv").write_text("\n".join(meta) + "\n")
+    return subprocess.CompletedProcess(cmd, 0)
+
+
+MATURE = b">Hsa-Mir-21_5p\nUAGCUUAUCAGACUGAUGUUGA\n"
+HAIRPIN = b">Hsa-Mir-21_pri\nUGUCGGGUAGCUUAUCAGACUGAUGUUGACUGUUGAAUCUCAUGGCAACACCAGUCGAUGGGCUGUC\n"
+
+
+class FastaTests(SimpleTestCase):
+    def parse(self, content: bytes):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from misra.forms import parse_fasta
+        return parse_fasta(SimpleUploadedFile("x.fa", content), "Test")
+
+    def test_valid_with_u_to_t_and_multiline(self):
+        fa = self.parse(b">a desc\nacgu\nNNAC\n\n>b\nTTTT\n")
+        self.assertEqual(fa.records, [("a", "ACGTNNAC"), ("b", "TTTT")])
+        self.assertEqual(fa.text(), ">a\nACGTNNAC\n>b\nTTTT\n")
+
+    def test_errors(self):
+        from django import forms
+        for content, msg in [(b"ACGT\n", "must start"), (b">a\nAC-GT\n", "invalid character"),
+                             (b">a\nAC\n>a\nGT\n", "duplicate"), (b">a\n>b\nAC\n", "is empty"), (b"", "no sequences"),
+                             (b"\xff\xfe>a", "plain-text")]:
+            with self.assertRaisesMessage(forms.ValidationError, msg):
+                self.parse(content)
+
+
+class SrnabenchJobTests(ToolFixture):
+    def submit(self, tool, data, files):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        payload = dict(data)
+        for key, content in files.items():
+            payload[key] = SimpleUploadedFile(f"{key}.fa", content)
+        with mock.patch("misra.runners.subprocess.run", side_effect=fake_srnabench) as run:
+            response = self.client.post(reverse("misra:tool", args=[tool]), payload)
+        return response, run
+
+    def test_mirna_job(self):
+        r, run = self.submit("mirna", {"accessions": "SRX001", "mm": 1, "min_rc": 2, "min_len": 18},
+                             {"mature": MATURE, "hairpin": HAIRPIN})
+        job = Job.objects.get()
+        self.assertEqual(job.status, Job.DONE, job.message)
+        self.assertEqual(job.params["mature"], "mature.fa (1 sequences, 22 nt)")
+        self.assertEqual((job.directory() / "input" / "mature.fa").read_text(),
+                         ">Hsa-Mir-21_5p\nTAGCTTATCAGACTGATGTTGA\n")
+        bench = [str(c) for c in run.call_args_list[-1].args[0]]
+        for opt, val in (("--mm", "1"), ("--min_read_count", "2"), ("--min_read_length", "18")):
+            self.assertEqual(bench[bench.index(opt) + 1], val)
+        self.assertIn("--notrna", bench)
+        names = [x["name"] for x in job.results]
+        self.assertEqual(names[:4], ["matrix_RC.tsv", "matrix_RCadj.tsv", "matrix_RPM_lib.tsv", "matrix_RPM_total.tsv"])
+        self.assertIn("results.xlsx", names)
+        self.assertIn("srnabench_output.zip", names)
+        self.assertEqual((job.directory() / "matrix_RC.tsv").read_text(), "miRNA\tSRX001\nHsa-Mir-21_5p\t10\n")
+        summary = (job.directory() / "experiment_summary.tsv").read_text().splitlines()
+        self.assertEqual(summary[1].split("\t")[-2:], ["10.0", "1.0"])
+        import zipfile
+        with zipfile.ZipFile(job.directory() / "srnabench_output.zip") as zf:
+            self.assertIn("SRX001/results.json", zf.namelist())
+            self.assertNotIn("SRX001/reads.fa", zf.namelist())
+        self.assertFalse((job.directory() / "bench").exists())
+
+    def test_exact_job_and_missing_reads(self):
+        r, run = self.submit("exact", {"accessions": "SRX001 SRX002"}, {"spikes": MATURE})
+        job = Job.objects.get()
+        self.assertEqual(job.status, Job.DONE, job.message)
+        self.assertIn("--spike_file", [str(c) for c in run.call_args.args[0]])
+        self.assertEqual((job.directory() / "experiments_without_reads.txt").read_text(), "SRX002\n")
+        self.assertEqual((job.directory() / "matrix_RCadj.tsv").read_text(), "sequence\tSRX001\nHsa-Mir-21_5p\t10\n")
+
+    def test_bad_fasta_is_rejected(self):
+        r, run = self.submit("exact", {"accessions": "SRX001"}, {"spikes": b"not a fasta"})
+        self.assertContains(r, "must start with")
+        self.assertFalse(Job.objects.exists())
+
+    def test_libs_blocked(self):
+        r = self.client.post(reverse("misra:tool", args=["libs"]), {"accessions": "SRX001"})
+        self.assertContains(r, "coming soon")
+        self.assertFalse(Job.objects.exists())

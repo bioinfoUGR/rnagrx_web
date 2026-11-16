@@ -18,6 +18,7 @@
       <div class="card-body">
         <h2 class="h5">{{ t.label }}{% if not t.enabled %} <span class="badge text-bg-secondary">coming soon</span>{% endif %}</h2>
         <p class="mb-0">{{ t.description }}</p>
+        {% if t.blocked %}<p class="small text-secondary mt-2 mb-0">{{ t.blocked }}</p>{% endif %}
       </div>
     </a>
   </div>

@@ -12,9 +12,9 @@
 
 {% if not tool.enabled %}
 <div class="no-results"><h2 class="h5">This tool is coming soon.</h2>
-  <p>It will be available again in the next version of miSRA.</p></div>
+  <p>{{ tool.blocked|default:"It will be available again in the next version of miSRA." }}</p></div>
 {% else %}
-<form method="post" class="tool-form" novalidate>
+<form method="post" class="tool-form" enctype="multipart/form-data" novalidate>
   {% csrf_token %}
   {{ form.source }}
   {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
@@ -36,7 +36,7 @@
   <div id="accession-check" class="mt-2"></div>
   {% endif %}
 
-  <h2 class="h6 mt-4">2. Options</h2>
+  <h2 class="h6 mt-4">2. {% if tool.files %}Reference sequences and options{% else %}Options{% endif %}</h2>
   <div class="row g-3 tool-options">
     {% for field in form %}{% if field.name != "accessions" and field.name != "source" %}
     <div class="col-sm-6 col-lg-4">

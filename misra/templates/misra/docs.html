@@ -33,7 +33,22 @@
       No account is needed.</li>
     <li>On the cart page you can filter the cart, remove experiments, or keep only the matching ones.</li>
     <li>“Save as selection” freezes the cart under a permanent link that you can share, cite or open later.</li>
-    <li>Downloads of reads and expression values, and new analyses with sRNAbench, will be added to the cart page.</li>
+    <li>From the cart (or a saved selection) you can start any of the tools below with its experiments.</li>
   </ul>
+
+  <h2 class="h5">Tools</h2>
+  <p>If you already know the accessions, open a tool from the <b>Tools</b> menu and paste experiment
+    (SRX/ERX/DRX) or study (SRP/ERP/DRP) accessions; a study stands for all its experiments in miSRA.</p>
+  <ul>
+    <li><b>Download reads</b>: the preprocessed reads (adapter-trimmed, collapsed to unique sequences with counts),
+      one FASTA file per experiment in a ZIP or tar.gz archive.</li>
+    <li><b>Expression matrix</b>: the miSRA miRNA profiles (MirGeneDB, miRBase or PmiREN) as one table.</li>
+    <li><b>miRNA profiling</b>: runs sRNAbench on the reads with your own mature and hairpin sequences.</li>
+    <li><b>Exact matches</b>: counts reads identical to short sequences you provide, e.g. spike-ins.</li>
+    <li><b>Libs</b>: maps the reads against longer reference sequences (coming soon).</li>
+  </ul>
+  <p>Each run is a job with its own page: keep or bookmark the link. Results are kept for 14 days.
+    The sRNAbench tools return expression matrices (read counts, adjusted counts and RPM), a summary per
+    experiment, an Excel workbook and the full sRNAbench output.</p>
 </article>
 {% endblock %}

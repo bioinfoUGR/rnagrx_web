@@ -16,6 +16,14 @@
     <a class="btn btn-sm btn-outline-primary" href="{% url 'misra:selection_tsv' selection.slug %}">Download metadata (TSV)</a>
     <a class="btn btn-sm btn-outline-primary" href="{% url 'misra:tool' 'download' %}?source=selection:{{ selection.slug }}">Download reads</a>
     <a class="btn btn-sm btn-outline-primary" href="{% url 'misra:tool' 'matrix' %}?source=selection:{{ selection.slug }}">Expression matrix</a>
+    <div class="dropdown">
+      <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Profile with sRNAbench</button>
+      <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="{% url 'misra:tool' 'mirna' %}?source=selection:{{ selection.slug }}">miRNA profiling (your annotation)</a></li>
+        <li><a class="dropdown-item" href="{% url 'misra:tool' 'exact' %}?source=selection:{{ selection.slug }}">Exact matches (spike-ins)</a></li>
+        <li><a class="dropdown-item" href="{% url 'misra:tool' 'libs' %}?source=selection:{{ selection.slug }}">Libs (longer references)</a></li>
+      </ul>
+    </div>
   </div>
 </section>
 <div id="browse">{% include "misra/_browse.html" %}</div>

@@ -1,0 +1,1 @@
+{% load misra_tags %}<th class="{% if num %}num {% endif %}sortable"><a href="{% url 'misra:taxonomy' %}?{{ sort_links|get:name }}" hx-get="{% url 'misra:taxonomy' %}?{{ sort_links|get:name }}" hx-target="#taxonomy" hx-push-url="true">{{ label }}{% if sort == name %} <span aria-hidden="true">{% if desc %}▼{% else %}▲{% endif %}</span>{% endif %}</a></th>

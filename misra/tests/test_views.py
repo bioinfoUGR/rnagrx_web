@@ -54,10 +54,20 @@ class BrowseViewTests(TestCase):
         self.assertNotContains(r, 'value="liver"')
 
     def test_taxonomy(self):
-        r = self.client.get(reverse("misra:taxonomy"))
+        url = reverse("misra:taxonomy")
+        r = self.client.get(url)
         self.assertContains(r, "Viridiplantae")
-        r = self.client.get(reverse("misra:taxonomy") + "?f_tax_kingdom=Metazoa")
-        self.assertContains(r, "5 experiments")
+        self.assertContains(r, 'name="f_tax_kingdom" value="Metazoa"')
+        # drill down: phylum level inside Metazoa, header offers its 5 experiments
+        r = self.client.get(url + "?f_tax_kingdom=Metazoa")
+        self.assertContains(r, "Show all 5 experiments")
+        # organism level, searched by lineage
+        r = self.client.get(url + "?rank=organism&term=viridi", HTTP_HX_REQUEST="true")
+        self.assertContains(r, "Zea mays")
+        self.assertNotContains(r, "Homo sapiens")
+        r = self.client.get(url + "?rank=organism&sort=experiments&dir=desc")
+        body = r.content.decode()
+        self.assertLess(body.index("Homo sapiens"), body.index("Mus musculus"))
 
     def test_explore(self):
         self.assertContains(self.client.get(reverse("misra:explore")), "Homo sapiens")

@@ -84,6 +84,17 @@ class EngineTests(SimpleTestCase):
         q = Query(filters={"sample_class": ["tissue_or_organ"]}, scope_mask=self.cat.mask_of_positions(pos))
         self.assertEqual(self.ids(q), ["ERX006", "SRX004"])
 
+    def test_taxon_table(self):
+        mask = self.cat.evaluate(Query()).mask
+        rows = {r["value"]: r for r in self.cat.taxon_table(mask, "tax_kingdom", [])}
+        self.assertEqual(rows["Metazoa"]["organisms"], 2)
+        self.assertEqual(rows["Metazoa"]["studies"], 2)
+        self.assertEqual(rows["Metazoa"]["experiments"], 5)
+        self.assertEqual(rows["Metazoa"]["reads"], 5e6 + 2e5 + 8e6 + 1e6)  # missing reads count as 0
+        rows = {r["value"]: r for r in self.cat.taxon_table(mask, "organism", ["tax_kingdom"])}
+        self.assertEqual(rows["Zea mays"]["lineage"], ["Viridiplantae"])
+        self.assertEqual(rows["Mus musculus"]["experiments"], 2)
+
     def test_save_and_load(self):
         import tempfile
         from pathlib import Path

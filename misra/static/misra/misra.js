@@ -29,6 +29,8 @@
   }
 
   function initSelection(root) {
+    var outer = root.closest && root.closest(".selection-form");  // a part of a form was swapped
+    if (outer) { updateTicked(outer); }
     root.querySelectorAll(".selection-form").forEach(function (form) {
       updateTicked(form);
     });

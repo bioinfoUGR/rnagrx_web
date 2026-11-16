@@ -1,0 +1,80 @@
+{% load humanize misra_tags %}
+{% url 'misra:taxonomy' as tax_url %}{% url 'misra:browse' as browse_url %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Browse by taxonomy</p>
+    <h1 class="h3">{% if crumbs %}{% with c=crumbs|last %}{{ c.rank }}: <span class="fst-italic">{{ c.value }}</span>{% endwith %}{% else %}All organisms{% endif %}</h1>
+    <nav class="small" aria-label="Taxonomy path">
+      <a href="{{ tax_url }}" hx-get="{{ tax_url }}" hx-target="#taxonomy" hx-push-url="true">All</a>
+      {% for c in crumbs %} › <a href="{{ tax_url }}?{{ c.params }}" hx-get="{{ tax_url }}?{{ c.params }}"
+         hx-target="#taxonomy" hx-push-url="true">{{ c.value }}</a>{% endfor %}
+    </nav>
+  </div>
+  <div class="cart-actions">
+    <a class="btn btn-primary" href="{{ browse_url }}?{{ browse_params }}">Show all {{ total|intcomma }} experiments →</a>
+  </div>
+</section>
+
+<ul class="nav nav-tabs mb-2" aria-label="Taxonomic level">
+  {% for t in rank_tabs %}
+  <li class="nav-item"><a class="nav-link {% if t.active %}active{% endif %}" href="{{ tax_url }}?{{ t.params }}"
+      hx-get="{{ tax_url }}?{{ t.params }}" hx-target="#taxonomy" hx-push-url="true">{{ t.label }}</a></li>
+  {% endfor %}
+</ul>
+
+<form id="taxsel" class="selection-form" method="get" action="{{ browse_url }}">
+  {% for r, v in path %}<input type="hidden" name="f_{{ r }}" value="{{ v }}">{% endfor %}
+  <div class="action-bar">
+    <input class="form-control form-control-sm tax-search no-submit" type="search" name="term" form="tax-term"
+           value="{{ term }}" placeholder="Search {{ rank_label|lower }} names{% if show_lineage %} or lineage{% endif %}…"
+           aria-label="Search the table"
+           hx-get="{{ tax_url }}" hx-vals='{"rank": "{{ rank }}"}' hx-include="#taxsel input[type=hidden]"
+           hx-trigger="input changed delay:300ms, search" hx-target="#tax-table" hx-select="#tax-table" hx-swap="outerHTML"
+           hx-push-url="true" hx-sync="this:replace">
+    <span class="small text-secondary"><span data-ticked-count>0</span> ticked</span>
+    <button class="btn btn-sm btn-outline-primary" type="submit" data-needs-ticked disabled>Show experiments of ticked</button>
+    <button class="btn btn-sm btn-primary" type="button" data-needs-ticked disabled
+            hx-post="{% url 'misra:cart_add' %}" hx-include="#taxsel" hx-vals='{"mode": "query", "scope": "all"}'
+            hx-target="#toasts" hx-swap="afterbegin">Add their experiments to cart</button>
+  </div>
+
+  <div id="tax-table">
+  <p class="small text-secondary mb-1">{{ n_rows|intcomma }}{% if term %} of {{ n_all|intcomma }}{% endif %} {{ rank_label|lower }}{{ n_rows|pluralize:" taxon, taxa" }}{% if not is_organism %} · click a name for the next level{% endif %}</p>
+  {% if rows %}
+  <div class="table-responsive">
+    <table class="table table-sm table-hover results-table taxon-table">
+      <thead><tr>
+        <th><input class="form-check-input" type="checkbox" data-select-all aria-label="Tick all rows"></th>
+        {% include "misra/_tax_sort_th.html" with name="name" label=rank_label %}
+        {% if show_lineage %}<th>{{ lineage_label }}</th>{% endif %}
+        {% if not is_organism %}{% include "misra/_tax_sort_th.html" with name="organisms" label="Organisms" num=1 %}{% endif %}
+        {% include "misra/_tax_sort_th.html" with name="studies" label="Studies" num=1 %}
+        {% include "misra/_tax_sort_th.html" with name="experiments" label="Experiments" num=1 %}
+        {% include "misra/_tax_sort_th.html" with name="reads" label="Reads" num=1 %}
+      </tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td><input class="form-check-input row-select" type="checkbox" name="f_{{ rank }}" value="{{ r.value }}"
+                     aria-label="Tick {{ r.value|default:'not assigned' }}"></td>
+          <td class="{% if is_organism %}fst-italic{% endif %}">
+            {% if r.drill %}<a href="{{ tax_url }}?{{ r.drill }}" hx-get="{{ tax_url }}?{{ r.drill }}" hx-target="#taxonomy"
+               hx-push-url="true" title="Show the next level within {{ r.value|default:'not assigned' }}">{{ r.value|default:"not assigned" }}</a>
+            {% else %}{{ r.value|default:"not assigned" }}{% endif %}
+          </td>
+          {% if show_lineage %}<td class="small text-secondary">{{ r.lineage|join:" › " }}</td>{% endif %}
+          {% if not is_organism %}<td class="num">{{ r.organisms|intcomma }}</td>{% endif %}
+          <td class="num">{{ r.studies|intcomma }}</td>
+          <td class="num"><a href="{{ browse_url }}?{{ r.browse }}" title="Show these experiments">{{ r.experiments|intcomma }}</a></td>
+          <td class="num">{{ r.reads|reads }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if n_rows > limit %}<p class="small text-secondary">First {{ limit }} of {{ n_rows|intcomma }} rows shown; search to narrow down.</p>{% endif %}
+  {% else %}
+  <div class="no-results"><h2 class="h5">No taxa match “{{ term }}”.</h2></div>
+  {% endif %}
+  </div>
+</form>

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import math
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib import messages
@@ -186,35 +187,80 @@ def facet_values(request, key):
                                                       "limit": 200})
 
 
+TAX_SORTS = ("name", "organisms", "studies", "experiments", "reads")
+TAX_TABLE_LIMIT = 1000
+
+
 @require_GET
 def taxonomy(request):
-    """Browse by taxonomy: pick a taxon at any rank, then go to its experiments."""
+    """Browse by taxonomy: a table of taxa at one rank (kingdom ... organism) with the number of
+    organisms, studies, experiments and reads; search it, drill down, tick taxa and go on to
+    their experiments."""
     catalog, error = _catalog_or_none(request)
     if error:
         return error
     bq = BrowseQuery.from_params(request.GET)
-    path = []  # [(rank, value)] from the URL, in rank order
-    for rank in TAX_RANKS:
-        values = bq.filters.get(rank)
-        if values:
-            path.append((rank, values[0]))
-    bq.filters = {rank: [value] for rank, value in path}
-    ev = catalog.evaluate(bq.engine_query())
-    level = TAX_RANKS[len(path)] if len(path) < len(TAX_RANKS) else None
-    children = []
-    if level:
-        values, _ = catalog.facet_values(ev, level)
-        for v in values:
-            child = BrowseQuery(filters={**bq.filters, level: [v["value"]]})
-            children.append({**v, "params": child.urlencode(), "leaf": level == TAX_RANKS[-1]})
-    crumbs = []
-    for i, (rank, value) in enumerate(path):
-        crumbs.append({"rank": FIELD_BY_KEY[rank].label, "value": value or "not assigned",
-                       "params": BrowseQuery(filters={r: [v] for r, v in path[:i + 1]}).urlencode()})
-    return render(request, "misra/taxonomy.html", {
-        "crumbs": crumbs, "level_label": FIELD_BY_KEY[level].label if level else None,
-        "children": children, "total": ev.count, "browse_params": bq.urlencode(),
-    })
+    path = [(r, bq.filters[r][0]) for r in TAX_RANKS if bq.filters.get(r)]  # parent taxa, top-down
+    path_filters = {r: [v] for r, v in path}
+    deepest = max((TAX_RANKS.index(r) for r, _ in path), default=-1)
+    ranks = TAX_RANKS[deepest + 1:] or TAX_RANKS[-1:]
+    rank = request.GET.get("rank")
+    if rank not in ranks:
+        rank = ranks[0]
+    term = (request.GET.get("term") or "").strip()[:100]
+    sort = request.GET.get("sort")
+    sort = sort if sort in TAX_SORTS else "experiments"
+    desc = request.GET.get("dir", "asc" if sort == "name" else "desc") == "desc"
+
+    ev = catalog.evaluate(BrowseQuery(filters=path_filters).engine_query())
+    parents = TAX_RANKS[:TAX_RANKS.index(rank)]
+    rows = catalog.taxon_table(ev.mask, rank, [p for p in parents if p not in path_filters])
+    n_all = len(rows)
+    if term:
+        t = term.casefold()
+        rows = [r for r in rows if t in r["value"].casefold() or any(t in x.casefold() for x in r["lineage"])]
+    key = "value" if sort == "name" else sort
+    rows.sort(key=lambda r: (r[key].casefold() if key == "value" else r[key], r["value"]), reverse=desc)
+    if sort == "name":  # "not assigned" last
+        rows.sort(key=lambda r: r["value"] == "")
+    n_rows = len(rows)
+    rows = rows[:TAX_TABLE_LIMIT]
+
+    def params(**extra):
+        items = [(f"f_{r}", v) for r, v in path]
+        items += [(k, v) for k, v in extra.items() if v not in (None, "")]
+        return urlencode(items)
+
+    next_rank = ranks[ranks.index(rank) + 1] if rank != TAX_RANKS[-1] and ranks.index(rank) + 1 < len(ranks) else None
+    for r in rows:
+        r["browse"] = urlencode([(f"f_{p}", v) for p, v in path] + [(f"f_{rank}", r["value"])])
+        r["drill"] = (urlencode([(f"f_{p}", v) for p, v in path] + [(f"f_{rank}", r["value"]),
+                                                                  ("rank", next_rank)]) if next_rank else None)
+    crumbs = [{"rank": FIELD_BY_KEY[r].label, "value": v or "not assigned",
+               "params": urlencode([(f"f_{p}", pv) for p, pv in path[:i + 1]])}
+              for i, (r, v) in enumerate(path)]
+    sort_links = {}
+    for name in TAX_SORTS:
+        if name == sort:  # clicking the current column flips the direction
+            direction = "asc" if desc else "desc"
+        else:
+            direction = "asc" if name == "name" else "desc"
+        sort_links[name] = params(rank=rank, term=term, sort=name, dir=direction)
+    context = {
+        "rank": rank, "rank_label": FIELD_BY_KEY[rank].label,
+        "rank_tabs": [{"key": r, "label": FIELD_BY_KEY[r].label, "params": params(rank=r, term=term),
+                       "active": r == rank} for r in ranks],
+        "crumbs": crumbs, "path": path, "term": term, "rows": rows, "n_rows": n_rows, "n_all": n_all,
+        "limit": TAX_TABLE_LIMIT, "sort": sort, "desc": desc, "sort_links": sort_links,
+        "total": ev.count, "browse_params": params(), "show_lineage": bool(parents) and rank != TAX_RANKS[0],
+        "lineage_label": " › ".join(FIELD_BY_KEY[p].label for p in parents if p not in path_filters),
+        "is_organism": rank == "organism",
+    }
+    template = "misra/_taxonomy.html" if request.htmx and not request.htmx.history_restore_request \
+        else "misra/taxonomy.html"
+    response = render(request, template, context)
+    patch_vary_headers(response, ("HX-Request",))
+    return response
 
 
 @require_GET

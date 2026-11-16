@@ -259,5 +259,37 @@ class Catalog:
         } for c in codes]
         return rows, total
 
+    def _distinct_per(self, codes: np.ndarray, mask: np.ndarray, other: str, n: int) -> np.ndarray:
+        """For each code: number of distinct, annotated values of field `other` among masked rows."""
+        other_codes = self.codes[other][mask].astype(np.int64)
+        keep = other_codes != 0
+        width = len(self.vocab[other])
+        pairs = np.unique(codes[keep].astype(np.int64) * width + other_codes[keep])
+        return np.bincount(pairs // width, minlength=n)
+
+    def taxon_table(self, mask: np.ndarray, rank: str, parents: list[str]) -> list[dict]:
+        """One row per taxon of `rank` among the masked experiments: number of organisms,
+        studies, experiments and reads, plus its lineage (values of the `parents` ranks)."""
+        codes = self.codes[rank][mask]
+        n = len(self.vocab[rank])
+        experiments = np.bincount(codes, minlength=n)
+        reads = np.bincount(codes, weights=np.nan_to_num(self.nums["read_count"][mask]), minlength=n)
+        organisms = self._distinct_per(codes, mask, "organism", n)
+        studies = self._distinct_per(codes, mask, "study", n)
+        present, first = np.unique(codes, return_index=True)
+        rows_idx = np.nonzero(mask)[0][first]  # one experiment per taxon, for its lineage
+        out = []
+        for code, row in zip(present, rows_idx):
+            lineage = [str(self.vocab[p][self.codes[p][row]]) for p in parents]
+            out.append({
+                "value": str(self.vocab[rank][code]),
+                "lineage": [v for v in lineage if v],
+                "organisms": int(organisms[code]),
+                "studies": int(studies[code]),
+                "experiments": int(experiments[code]),
+                "reads": float(reads[code]),
+            })
+        return out
+
     def exp_ids(self, mask: np.ndarray) -> list[str]:
         return [str(x) for x in self.exp_id[mask]]

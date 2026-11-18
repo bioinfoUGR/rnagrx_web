@@ -31,11 +31,11 @@
   <thead><tr><th>Job</th><th>Tool</th><th>Experiments</th><th>Started</th><th>Status</th></tr></thead>
   <tbody>{% for j in jobs %}
     <tr><td><a href="{{ j.get_absolute_url }}"><code>{{ j.slug }}</code></a></td><td>{{ j.tool }}</td>
-      <td class="num">{{ j.n_experiments|intcomma }}</td><td>{{ j.created_at|date:"j M Y H:i" }}</td>
-      <td>{% include "misra/_job_badge.html" with job=j %}</td></tr>
+      <td class="num">{{ j.n_items|intcomma }}</td><td>{{ j.created_at|date:"j M Y H:i" }}</td>
+      <td>{% include "jobs/_job_badge.html" with job=j %}</td></tr>
   {% endfor %}</tbody>
 </table>
 </div>
-<p class="small text-secondary">Results are kept for 14 days. This list is stored in your browser session; bookmark a job page to keep it.</p>
+<p class="small text-secondary">Results are kept for {{ max_age_days }} days. This list is stored in your browser session; bookmark a job page to keep it.</p>
 {% endif %}
 {% endblock %}

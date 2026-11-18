@@ -5,7 +5,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from .models import Job
-from .runners import RUNNERS
+from .registry import get_tool
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +27,10 @@ def run_job(job_id: int) -> None:
             fh.write(f"{timezone.localtime():%H:%M:%S}  {text}\n")
 
     try:
-        results = RUNNERS[job.tool](job, directory, write_log)
+        tool = get_tool(job.app, job.tool)
+        if tool is None:
+            raise RuntimeError(f"unknown tool {job.app}/{job.tool}")
+        results = tool.run(job, directory, write_log)
         for r in results:
             r["size"] = (directory / r["name"]).stat().st_size
         job.results = results
@@ -40,3 +43,8 @@ def run_job(job_id: int) -> None:
         job.message = str(exc)[:4000]
     job.finished_at = timezone.now()
     job.save(update_fields=["status", "results", "message", "finished_at"])
+
+
+def submit(job: Job) -> None:
+    """Queue a job on the queue of its tool."""
+    run_job.apply_async((job.pk,), queue=job.tool_info.queue)

@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "django_htmx",
     "core",
     "misradb",
+    "jobs",
     "misra",
 ]
 
@@ -142,7 +143,7 @@ LOGGING = {
     "loggers": {"django.db.backends": {"level": "WARNING"}},
 }
 
-# Celery (jobs come in later phases; the app is configured already)
+# Celery (runs the jobs, see jobs/tasks.py)
 CELERY_BROKER_URL = env.str("REDIS_URL", default="redis://127.0.0.1:6379/2")
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_TASK_ACKS_LATE = True
@@ -165,16 +166,18 @@ MISRA_CART_LIMIT = env.int("MISRA_CART_LIMIT", default=100_000)
 MISRA_CART_MAX_AGE_DAYS = env.int("MISRA_CART_MAX_AGE_DAYS", default=30)
 MISRA_PAGE_SIZE = 50
 
-# miSRA tools (jobs): working directories, retention, and max experiments per job
-MISRA_JOB_DIR = Path(env.str("MISRA_JOB_DIR", default=str(SCRATCH_DIR / "jobs")))
-MISRA_JOB_MAX_AGE_DAYS = env.int("MISRA_JOB_MAX_AGE_DAYS", default=14)
+# Jobs of all services: working directories and retention (the MISRA_* keys are the old names)
+JOB_DIR = Path(env.str("JOB_DIR", default=env.str("MISRA_JOB_DIR", default=str(SCRATCH_DIR / "jobs"))))
+JOB_MAX_AGE_DAYS = env.int("JOB_MAX_AGE_DAYS", default=env.int("MISRA_JOB_MAX_AGE_DAYS", default=14))
+FASTA_UPLOAD_MAX_MB = env.int("FASTA_UPLOAD_MAX_MB", default=env.int("MISRA_UPLOAD_MAX_MB", default=50))
+
+# miSRA tools: max experiments per job, sRNAbench resources
 MISRA_LIMIT_MATRIX = env.int("MISRA_LIMIT_MATRIX", default=20_000)
 MISRA_LIMIT_DOWNLOAD = env.int("MISRA_LIMIT_DOWNLOAD", default=2_000)
 MISRA_LIMIT_SRNABENCH = env.int("MISRA_LIMIT_SRNABENCH", default=500)
 MISRA_SRNABENCH_META_THREADS = env.int("MISRA_SRNABENCH_META_THREADS", default=4)  # experiments in parallel
 MISRA_SRNABENCH_THREADS = env.int("MISRA_SRNABENCH_THREADS", default=2)  # threads per experiment
 MISRA_SRNABENCH_TIMEOUT_HOURS = env.int("MISRA_SRNABENCH_TIMEOUT_HOURS", default=24)
-MISRA_UPLOAD_MAX_MB = env.int("MISRA_UPLOAD_MAX_MB", default=50)
 # API: experiments per request for matrices / per-experiment details, requests per minute and IP (0 = no limit)
 MISRA_API_MATRIX_LIMIT = env.int("MISRA_API_MATRIX_LIMIT", default=2_000)
 MISRA_API_DETAIL_LIMIT = env.int("MISRA_API_DETAIL_LIMIT", default=1_000)

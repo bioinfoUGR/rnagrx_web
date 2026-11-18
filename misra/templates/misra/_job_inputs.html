@@ -1,0 +1,1 @@
+{% load humanize %}<tr><th>Experiments</th><td>{{ job.n_items|intcomma }}{% if job.inputs.source == "cart" %} (from a cart){% elif job.inputs.source and job.inputs.source != "accessions" %} (from a saved selection){% endif %}</td></tr>

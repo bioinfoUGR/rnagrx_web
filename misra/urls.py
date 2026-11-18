@@ -1,5 +1,7 @@
 from django.urls import path, re_path
 
+from jobs import views as job_views
+
 from . import views, views_tools
 from .api import views as api
 
@@ -23,8 +25,8 @@ urlpatterns = [
     path("tools/", views_tools.tools_index, name="tools"),
     path("tools/check/", views_tools.check_accessions, name="check_accessions"),
     path("tools/<slug:key>/", views_tools.tool_view, name="tool"),
-    path("job/<str:slug>/", views_tools.job_view, name="job"),
-    path("job/<str:slug>/file/<str:name>", views_tools.job_file, name="job_file"),
+    path("job/<str:slug>/", job_views.job_view, {"app": "misra"}, name="job"),
+    path("job/<str:slug>/file/<str:name>", job_views.job_file, {"app": "misra"}, name="job_file"),
     path("api/", api.api_help, name="api_help"),
     re_path(r"^api/v1/studies/(?P<accession>[A-Za-z0-9]+)/?$", api.studies, name="api_study"),
     re_path(r"^api/v1/selections/(?P<slug>[A-Za-z0-9_-]+)/?$", api.selections, name="api_selection"),

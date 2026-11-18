@@ -14,7 +14,7 @@ from misra import index_store
 from misra.accessions import resolve
 from misra.engine import Catalog
 from misra.indexer import build_index
-from misra.models import Job
+from jobs.models import Job
 
 from .factories import sample_records, sample_studies
 
@@ -106,13 +106,13 @@ class ToolJobTests(ToolFixture):
 
     def test_download_job_from_cart(self):
         self.client.post(reverse("misra:cart_add"), {"mode": "ids", "exp": ["SRX001", "SRX002"]})
-        with mock.patch("misra.runners.subprocess.run", side_effect=fake_srnahelper) as run:
+        with mock.patch("jobs.commands.subprocess.run", side_effect=fake_srnahelper) as run:
             self.client.post(reverse("misra:tool", args=["download"]),
                              {"source": "cart", "sep": "#", "outformat": "zip", "min_rc": 2, "min_len": 18,
                               "max_len": 26})
         job = Job.objects.get()
         self.assertEqual(job.status, Job.DONE, job.message)
-        self.assertEqual(job.source, "cart")
+        self.assertEqual(job.inputs["source"], "cart")
         cmd = run.call_args.args[0]
         self.assertIn("prf", cmd)
         self.assertEqual(cmd[cmd.index("--min_read_count") + 1], "2")
@@ -139,21 +139,6 @@ class ToolJobTests(ToolFixture):
         job = Job.objects.get()
         self.assertEqual(job.status, Job.FAILED)
         self.assertContains(self.client.get(job.get_absolute_url()), "None of the experiments has MirGeneDB")
-
-    def test_cleanup_expires_old_jobs(self):
-        from datetime import timedelta
-
-        from django.core.management import call_command
-        from django.utils import timezone
-        job = Job.objects.create(tool="matrix", exp_ids="SRX001", n_experiments=1, status=Job.DONE,
-                                 results=[{"name": "x", "label": "x", "size": 1}])
-        job.directory().mkdir(parents=True)
-        (job.directory() / "x").write_text("x")
-        Job.objects.filter(pk=job.pk).update(created_at=timezone.now() - timedelta(days=15))
-        call_command("misra_cleanup", stdout=io.StringIO())
-        job.refresh_from_db()
-        self.assertEqual(job.status, Job.EXPIRED)
-        self.assertFalse(job.directory().exists())
 
 
 def fake_srnabench(cmd, **kwargs):
@@ -224,7 +209,7 @@ class SrnabenchJobTests(ToolFixture):
         payload = dict(data)
         for key, content in files.items():
             payload[key] = SimpleUploadedFile(f"{key}.fa", content)
-        with mock.patch("misra.runners.subprocess.run", side_effect=fake_srnabench) as run:
+        with mock.patch("jobs.commands.subprocess.run", side_effect=fake_srnabench) as run:
             response = self.client.post(reverse("misra:tool", args=[tool]), payload)
         return response, run
 

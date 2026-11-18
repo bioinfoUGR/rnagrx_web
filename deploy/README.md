@@ -29,6 +29,8 @@ Layout on each server (dev and prod are the same, except `.env`):
 | REDIS_URL | redis://127.0.0.1:6379/2 | Celery broker |
 | CACHE_URL | redis://127.0.0.1:6379/3 | Django cache (optional, this is the default) |
 | MISRA_STORAGE, SCRATCH_DIR, SRNATOOLBOX_DB, SRNATOOLBOX_ENV, ENTREZ_EMAIL | | paths for the services |
+| JOB_DIR, JOB_MAX_AGE_DAYS | /scratch/rnagrx/jobs, 14 | job results of all services and their retention (optional; old names MISRA_JOB_DIR, MISRA_JOB_MAX_AGE_DAYS still read) |
+| FASTA_UPLOAD_MAX_MB | 50 | size limit of FASTA uploads in tool forms (optional; old name MISRA_UPLOAD_MAX_MB) |
 | MISRA_CART_LIMIT | 100000 | optional |
 | MISRA_API_MATRIX_LIMIT, MISRA_API_DETAIL_LIMIT | 2000, 1000 | API: experiments per request (matrices / per-experiment details) |
 | MISRA_API_RATE_PER_MIN | 120 | API requests per minute and client address (0 = no limit) |
@@ -49,7 +51,7 @@ A new index build is picked up by the running workers within 30 s; no restart is
 ## Tests
 
 ```bash
-../venv/bin/python manage.py test --settings=config.settings_test misra
+../venv/bin/python manage.py test --settings=config.settings_test jobs misra
 ```
 
 ## gunicorn and Celery under supervisor (root)
@@ -63,8 +65,8 @@ sudo supervisorctl status rnagrx_web rnagrx_celery
 ```
 
 After a code update: `sudo supervisorctl restart rnagrx_web rnagrx_celery`.
-Job results go to `MISRA_JOB_DIR` (default `/scratch/rnagrx/jobs`) and are removed by `misra_cleanup` after
-`MISRA_JOB_MAX_AGE_DAYS` (14). Per-job limits: `MISRA_LIMIT_MATRIX`, `MISRA_LIMIT_DOWNLOAD`, `MISRA_LIMIT_SRNABENCH`.
+Job results go to `JOB_DIR` (default `/scratch/rnagrx/jobs`) and are removed by `jobs_cleanup` after
+`JOB_MAX_AGE_DAYS` (14). Per-job limits: `MISRA_LIMIT_MATRIX`, `MISRA_LIMIT_DOWNLOAD`, `MISRA_LIMIT_SRNABENCH`.
 www-data needs write access to `/var/www/rnagrx/logs` and `/scratch/rnagrx/jobs` (group www-data, mode 2775).
 
 ## Apache (root)
@@ -86,4 +88,5 @@ Static files are served by WhiteNoise from gunicorn; no Apache alias is needed.
 ```
 30 3 * * *  cd /var/www/rnagrx/app && ../venv/bin/python manage.py misra_build_index >> ../logs/misra_build_index.log 2>&1
 45 4 * * *  cd /var/www/rnagrx/app && ../venv/bin/python manage.py misra_cleanup >> ../logs/misra_cleanup.log 2>&1
+50 4 * * *  cd /var/www/rnagrx/app && ../venv/bin/python manage.py jobs_cleanup >> ../logs/jobs_cleanup.log 2>&1
 ```

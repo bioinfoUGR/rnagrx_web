@@ -3,9 +3,9 @@
   <div class="row g-4">
     <div class="col-lg-5">
       <table class="table table-sm kv-table">
-        <tr><th>Status</th><td>{% include "misra/_job_badge.html" %}
+        <tr><th>Status</th><td>{% include "jobs/_job_badge.html" %}
           {% if job.is_active %}<span class="spinner-border spinner-border-sm text-primary ms-2" role="status" aria-label="Working"></span>{% endif %}</td></tr>
-        <tr><th>Experiments</th><td>{{ job.n_experiments|intcomma }}{% if job.source == "cart" %} (from a cart){% elif job.source != "accessions" %} (from a saved selection){% endif %}</td></tr>
+        {% include inputs_template %}
         {% for k, v in job.params.items %}<tr><th>{{ k }}</th><td>{{ v|default_if_none:"—" }}</td></tr>{% endfor %}
         {% if job.started_at %}<tr><th>Started</th><td>{{ job.started_at|date:"H:i:s" }}</td></tr>{% endif %}
         {% if job.finished_at %}<tr><th>Finished</th><td>{{ job.finished_at|date:"H:i:s" }}</td></tr>{% endif %}
@@ -13,12 +13,13 @@
     </div>
     <div class="col-lg-7">
       {% if job.status == "done" %}
+      {% if tool.result_template %}{% include tool.result_template %}{% endif %}
       <h2 class="h5">Results</h2>
       <ul class="list-group mb-3">
         {% for r in job.results %}
         <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
           <span>{{ r.label }}<br><code class="small">{{ r.name }}</code></span>
-          <a class="btn btn-sm btn-primary text-nowrap" href="{% url 'misra:job_file' job.slug r.name %}">Download ({{ r.size|filesizeformat }})</a>
+          <a class="btn btn-sm btn-primary text-nowrap" href="{% url file_view job.slug r.name %}">Download ({{ r.size|filesizeformat }})</a>
         </li>
         {% endfor %}
       </ul>
@@ -27,7 +28,7 @@
       {% elif job.status == "queued" %}
       <p>Waiting for a free worker…</p>
       {% elif job.status == "expired" %}
-      <p>The results of this job have been deleted (they are kept for 14 days).</p>
+      <p>The results of this job have been deleted (they are kept for {{ max_age_days }} days).</p>
       {% endif %}
       {% if log %}<h2 class="h6">Log</h2><pre class="job-log">{{ log }}</pre>{% endif %}
     </div>

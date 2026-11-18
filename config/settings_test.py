@@ -22,7 +22,7 @@ URL_PREFIX = ""
 STATIC_URL = "/static/"
 SESSION_COOKIE_PATH = "/"
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
-MISRA_JOB_DIR = Path(tempfile.mkdtemp(prefix="misra_jobs_test_"))
+JOB_DIR = Path(tempfile.mkdtemp(prefix="jobs_test_"))
 MISRA_STORAGE = Path(tempfile.mkdtemp(prefix="misra_storage_test_"))
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_BROKER_URL = "memory://"

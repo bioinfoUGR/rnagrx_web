@@ -1,20 +1,20 @@
-"""miSRA tools: forms to start a job, the job page and its result files."""
+"""miSRA tools: the tool list and the forms that start a job (job pages: jobs.views)."""
 from __future__ import annotations
 
-from django.http import FileResponse, Http404
+from django.conf import settings
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.cache import patch_vary_headers
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
+
+from jobs.models import Job
+from jobs.tasks import submit
+from jobs.views import recent_jobs, remember_job
 
 from . import cart as cart_ops
 from .accessions import resolve
 from .index_store import get_catalog
-from .models import Job, Selection
-from .tasks import run_job
+from .models import Selection
 from .tools import TOOLS
-
-SESSION_JOBS = "misra_jobs"
-LOG_LINES = 40
 
 
 def _source_ids(request, source: str, catalog):
@@ -32,16 +32,10 @@ def _source_ids(request, source: str, catalog):
     return known, label
 
 
-def _remember_job(request, job):
-    jobs = [s for s in request.session.get(SESSION_JOBS, []) if s != job.slug]
-    request.session[SESSION_JOBS] = [job.slug] + jobs[:19]
-
-
 @require_GET
 def tools_index(request):
-    slugs = request.session.get(SESSION_JOBS, [])
-    jobs = sorted(Job.objects.filter(slug__in=slugs), key=lambda j: -j.pk)
-    return render(request, "misra/tools.html", {"tools": TOOLS.values(), "jobs": jobs})
+    return render(request, "misra/tools.html", {"tools": TOOLS.values(), "jobs": recent_jobs(request, "misra"),
+                                                "max_age_days": settings.JOB_MAX_AGE_DAYS})
 
 
 @require_http_methods(["GET", "POST"])
@@ -79,16 +73,16 @@ def tool_view(request, key):
                     fasta = form.cleaned_data[key]
                     params[key] = fasta.describe(fasta.filename)
                 job = Job.objects.create(
-                    tool=tool.key, exp_ids=" ".join(ids), n_experiments=len(ids), source=source or "accessions",
-                    params=params,
+                    app="misra", tool=tool.key, params=params, n_items=len(ids),
+                    inputs={"exp_ids": list(ids), "source": source or "accessions"},
                 )
                 if tool.files:
                     inputs = job.directory() / "input"
                     inputs.mkdir(parents=True, exist_ok=True)
                     for key in tool.files:
                         (inputs / f"{key}.fa").write_text(form.cleaned_data[key].text())
-                _remember_job(request, job)
-                run_job.apply_async((job.pk,), queue=tool.queue)
+                remember_job(request, job)
+                submit(job)
                 return redirect(job)
     else:
         form = tool.form_class(initial={"source": source})
@@ -105,36 +99,3 @@ def check_accessions(request):
     tool = TOOLS.get(request.POST.get("tool", ""))
     res = resolve(request.POST.get("accessions", ""), catalog)
     return render(request, "misra/_accession_check.html", {"res": res, "limit": tool.limit if tool else None})
-
-
-def _log_tail(job) -> str:
-    path = job.directory() / "job.log"
-    try:
-        lines = path.read_text(errors="replace").splitlines()
-    except OSError:
-        return ""
-    return "\n".join(lines[-LOG_LINES:])
-
-
-@require_GET
-def job_view(request, slug):
-    job = get_object_or_404(Job, slug=slug)
-    _remember_job(request, job)
-    context = {"job": job, "tool": TOOLS.get(job.tool), "log": _log_tail(job)}
-    if request.htmx and not request.htmx.history_restore_request:
-        response = render(request, "misra/_job_status.html", context)
-    else:
-        response = render(request, "misra/job.html", context)
-    patch_vary_headers(response, ("HX-Request",))
-    return response
-
-
-@require_GET
-def job_file(request, slug, name):
-    job = get_object_or_404(Job, slug=slug)
-    if job.status != Job.DONE or name not in {r["name"] for r in job.results}:
-        raise Http404
-    path = job.directory() / name
-    if not path.is_file():
-        raise Http404
-    return FileResponse(open(path, "rb"), as_attachment=True, filename=name)

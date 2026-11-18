@@ -1,4 +1,4 @@
-"""What each miSRA tool does when its job runs (called from misra.tasks.run_job).
+"""What each miSRA tool does when its job runs (called from jobs.tasks.run_job).
 
 A runner gets the job, its working directory and a log function, writes its result
 files into the directory and returns them as [{name, label}].
@@ -6,15 +6,15 @@ files into the directory and returns them as [{name, label}].
 from __future__ import annotations
 
 import json
-import os
 import shutil
-import subprocess
 import zipfile
 from pathlib import Path
 
 import pandas as pd
 from django.conf import settings
 from django.db import connections
+
+from jobs.commands import run_command, srnatoolbox_command
 
 from .export import write_tsv
 from .expression import REFERENCE_BY_TABLE, load_values
@@ -34,6 +34,10 @@ def _chunks(items, n):
         yield items[i:i + n]
 
 
+def exp_ids(job) -> list[str]:
+    return list(job.inputs.get("exp_ids", []))
+
+
 def _metadata(job, directory: Path, ids) -> dict:
     write_tsv(ids, directory / "experiments_metadata.tsv")
     return {"name": "experiments_metadata.tsv", "label": "Metadata of the experiments (TSV)"}
@@ -44,7 +48,7 @@ def run_matrix(job, directory: Path, log) -> list[dict]:
     column = job.params["value"]
     if table not in MATRIX_TABLES or column not in MATRIX_VALUES:  # never interpolate unchecked names
         raise ValueError("unknown reference database or value")
-    ids = job.id_list()
+    ids = exp_ids(job)
     log(f"Expression matrix: {MATRIX_TABLES[table]}, {MATRIX_VALUES[column]}, {len(ids)} experiments")
     data = load_values(REFERENCE_BY_TABLE[table], ids, (column,),
                        progress=lambda done, total: log(f"read {done} of {total} experiments"))
@@ -78,16 +82,8 @@ def reads_files(ids) -> dict[str, list[str]]:
     return out
 
 
-def srnatoolbox_command(tool: str) -> tuple[str, dict]:
-    """Path of a srnatoolbox command in the conda env, and an environment with the env's bin on PATH."""
-    bin_dir = Path(settings.SRNATOOLBOX_ENV) / "bin"
-    env = os.environ.copy()
-    env["PATH"] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
-    return str(bin_dir / tool), env
-
-
 def run_download(job, directory: Path, log) -> list[dict]:
-    ids = job.id_list()
+    ids = exp_ids(job)
     p = job.params
     files = reads_files(ids)
     storage = Path(settings.MISRA_STORAGE)
@@ -110,13 +106,7 @@ def run_download(job, directory: Path, log) -> list[dict]:
                      ("--min_read_count", "min_rc")):
         if p.get(key) not in (None, ""):
             cmd += [opt, str(p[key])]
-    log("running: " + " ".join(cmd[1:]))
-    with open(directory / "tool.log", "w") as out:
-        proc = subprocess.run(cmd, stdout=out, stderr=subprocess.STDOUT, env=env, cwd=directory,
-                              timeout=6 * 3600)
-    if proc.returncode != 0:
-        tail = (directory / "tool.log").read_text(errors="replace")[-2000:]
-        raise RuntimeError(f"sRNAhelper failed (exit {proc.returncode}):\n{tail}")
+    run_command(cmd, directory, env, log, "tool.log", 6)
     name = f"misra_reads.{p['outformat']}"
     if not (directory / name).exists():
         raise RuntimeError(f"sRNAhelper finished but {name} was not written.")
@@ -140,16 +130,6 @@ KEEP_OUT_OF_ARCHIVE = {"reads.fa", "reads_orig_unfiltered.fa"}  # copies of the 
 
 def input_file(job, key: str) -> Path:
     return job.directory() / "input" / f"{key}.fa"
-
-
-def _run(cmd, directory: Path, env, log, logname: str, timeout_h: float):
-    log("running: " + " ".join([Path(cmd[0]).name] + [str(c) for c in cmd[1:]]))
-    with open(directory / logname, "a") as out:
-        proc = subprocess.run([str(c) for c in cmd], stdout=out, stderr=subprocess.STDOUT, env=env, cwd=directory,
-                              timeout=timeout_h * 3600)
-    if proc.returncode != 0:
-        tail = (directory / logname).read_text(errors="replace")[-2000:]
-        raise RuntimeError(f"{Path(cmd[0]).name} failed (exit {proc.returncode}):\n{tail}")
 
 
 def _expression_file(mode: str, res: dict, sample_dir: Path) -> Path | None:
@@ -186,7 +166,7 @@ def _feature_stats(matrix: pd.DataFrame, path: Path, label: str) -> None:
 def run_srnabench(job, directory: Path, log) -> list[dict]:
     mode = job.tool
     p = job.params
-    ids = job.id_list()
+    ids = exp_ids(job)
     files = reads_files(ids)
     storage = Path(settings.MISRA_STORAGE)
     rows, missing = [], []
@@ -214,7 +194,7 @@ def run_srnabench(job, directory: Path, log) -> list[dict]:
     if mode == "mirna":
         helper, _ = srnatoolbox_command("sRNAhelper")
         annot = directory / "mirna_annot.tsv"
-        _run([helper, "ma", "--mature", input_file(job, "mature"), "--hairpin", input_file(job, "hairpin"),
+        run_command([helper, "ma", "--mature", input_file(job, "mature"), "--hairpin", input_file(job, "hairpin"),
               "--outfile", annot], directory, env, log, "tool.log", 1)
         n_hairpins = max(0, len(annot.read_text().splitlines()) - 1) if annot.exists() else 0
         if n_hairpins == 0:
@@ -229,7 +209,7 @@ def run_srnabench(job, directory: Path, log) -> list[dict]:
     else:
         cmd += ["--spike_file", input_file(job, "spikes")]
         feature = "sequence"
-    _run(cmd, directory, env, log, "tool.log", settings.MISRA_SRNABENCH_TIMEOUT_HOURS)
+    run_command(cmd, directory, env, log, "tool.log", settings.MISRA_SRNABENCH_TIMEOUT_HOURS)
 
     # collect the per-experiment tables
     meta = pd.read_csv(out / "meta_results.csv")

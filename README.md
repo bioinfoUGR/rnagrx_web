@@ -17,7 +17,8 @@ sequencing experiments processed with sRNAbench); further services will follow.
 | `misra/engine.py` | in-memory column index: filtering, facet counts, paging |
 | `misra/indexer.py` | `manage.py misra_build_index` (nightly) |
 | `misra/views.py`, `query.py`, `cart.py` | browse, taxonomy, detail pages, cart and saved selections |
-| `misra/tools.py`, `forms.py`, `runners.py`, `tasks.py`, `views_tools.py` | tools and jobs (download, matrix, sRNAbench) |
+| `jobs/` | job system shared by the services: Job model, tool registry, Celery task, job page and result files, cleanup |
+| `misra/tools.py`, `forms.py`, `runners.py`, `views_tools.py` | miSRA tools (download, matrix, sRNAbench) registered with `jobs` |
 | `misra/api/` | API v1 (`docs.py` describes the endpoints and drives the help page) |
 | `misra/expression.py` | reading expression values from misradb2 |
 | `deploy/` | gunicorn, supervisor, Apache configs; conda env for srnatoolbox; misra_storage sync |
@@ -25,7 +26,7 @@ sequencing experiments processed with sRNAbench); further services will follow.
 ## Tests
 
 ```bash
-python manage.py test --settings=config.settings_test misra
+python manage.py test --settings=config.settings_test jobs misra
 ```
 
 The test settings use SQLite and an in-memory cache. `config/settings.py` still reads an env file, so set
@@ -37,5 +38,6 @@ The test settings use SQLite and an in-memory cache. `config/settings.py` still 
 ```bash
 python manage.py misra_build_index        # rebuild the search index from misradb2
 python manage.py misra_benchmark          # timing of the index at 300,000 synthetic experiments
-python manage.py misra_cleanup            # old carts, sessions and job results
+python manage.py misra_cleanup            # old carts and sessions
+python manage.py jobs_cleanup             # results of old jobs (all services)
 ```

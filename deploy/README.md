@@ -51,7 +51,7 @@ A new index build is picked up by the running workers within 30 s; no restart is
 ## Tests
 
 ```bash
-../venv/bin/python manage.py test --settings=config.settings_test jobs misra
+../venv/bin/python manage.py test --settings=config.settings_test jobs misra srnatoolbox
 ```
 
 ## gunicorn and Celery under supervisor (root)

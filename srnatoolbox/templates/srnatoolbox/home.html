@@ -1,0 +1,48 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% load humanize %}
+{% block page_title %}Home{% endblock %}
+{% block srnatoolbox_content %}
+<section class="toolbox-hero">
+  <h1>sRNAtoolbox</h1>
+  <p class="lead">Tools for the analysis of small RNA sequencing data: expression profiling of microRNAs and other
+    small RNAs, novel microRNA prediction and differential expression.</p>
+  <p class="text-secondary small mb-0">This is the new version of sRNAtoolbox, under construction. The previous
+    version, with all its tools, is still available at <a href="{{ old_site }}">{{ old_site }}</a>.</p>
+</section>
+
+<div class="row g-4">
+  {% for t in tools %}
+  <div class="col-md-6">
+    <a class="card h-100 entry-card{% if not t.enabled %} disabled-card{% endif %}" href="{% url 'srnatoolbox:tool' t.key %}">
+      <div class="card-body">
+        <h2 class="h5">{{ t.label }}{% if not t.enabled %} <span class="badge text-bg-secondary">coming soon</span>{% endif %}</h2>
+        <p class="mb-0">{{ t.description }}</p>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+{% if jobs %}
+<h2 class="h5 mt-4" id="your-jobs">Your recent jobs</h2>
+<div class="table-responsive">
+<table class="table table-sm results-table">
+  <thead><tr><th>Job</th><th>Tool</th><th>Samples</th><th>Started</th><th>Status</th></tr></thead>
+  <tbody>{% for j in jobs %}
+    <tr><td><a href="{{ j.get_absolute_url }}"><code>{{ j.slug }}</code></a></td><td>{{ j.tool_info.label|default:j.tool }}</td>
+      <td class="num">{{ j.n_items|intcomma }}</td><td>{{ j.created_at|date:"j M Y H:i" }}</td>
+      <td>{% include "jobs/_job_badge.html" with job=j %}</td></tr>
+  {% endfor %}</tbody>
+</table>
+</div>
+<p class="small text-secondary">Results are kept for {{ max_age_days }} days. This list is stored in your browser session; bookmark a job page to keep it.</p>
+{% else %}
+<p class="small text-secondary mt-4" id="your-jobs">Jobs you start appear here (for this browser session); results are kept for {{ max_age_days }} days.</p>
+{% endif %}
+
+<h2 class="h6 mt-4">More tools will follow</h2>
+<p class="small text-secondary">These tools of the previous version are not part of the new site yet; until then please use them at <a href="{{ old_site }}">{{ old_site }}</a>.</p>
+<ul class="list-unstyled planned-list small">
+  {% for name, text in planned %}<li><b>{{ name }}</b> · <span class="text-secondary">{{ text }}</span></li>{% endfor %}
+</ul>
+{% endblock %}

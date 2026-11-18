@@ -1,0 +1,2 @@
+{% load humanize %}<tr><th>Samples</th><td>{{ job.n_items|intcomma }}</td></tr>
+{% if job.parent %}<tr><th>Based on</th><td><a href="{{ job.parent.get_absolute_url }}">{{ job.parent.tool_info.label|default:job.parent.tool }} job <code>{{ job.parent.slug }}</code></a></td></tr>{% endif %}

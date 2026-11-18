@@ -1,0 +1,13 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% block page_title %}Job {{ job.slug }}{% endblock %}
+{% block srnatoolbox_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow"><a href="{% url 'srnatoolbox:home' %}">Tools</a> · job</p>
+    <h1 class="h3">{{ tool.title|default:job.tool }}</h1>
+    <p class="small text-secondary mb-0">Job <code>{{ job.slug }}</code> · started {{ job.created_at|date:"j F Y, H:i" }} ·
+      bookmark this page to come back later; results are kept for {{ max_age_days }} days.</p>
+  </div>
+</section>
+<div id="job-status">{% include "jobs/_job_status.html" %}</div>
+{% endblock %}

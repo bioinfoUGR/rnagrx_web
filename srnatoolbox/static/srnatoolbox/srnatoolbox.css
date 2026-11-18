@@ -1,0 +1,8 @@
+/* sRNAtoolbox; shared parts (page heads, cards, tables, jobs) are in core/site.css */
+.brand-srna { color: #c0392b; }
+.toolbox-hero { padding: 1.5rem 0 1.25rem; max-width: 60rem; }
+.toolbox-hero h1 { font-weight: 700; }
+.planned-list { background: #fff; border: 1px solid #dde2e7; border-radius: .5rem; }
+.planned-list li { padding: .5rem .9rem; border-top: 1px solid #eef0f3; }
+.planned-list li:first-child { border-top: 0; }
+.cite-list li { margin-bottom: .6rem; }

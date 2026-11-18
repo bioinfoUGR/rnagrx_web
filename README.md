@@ -1,7 +1,7 @@
 # rnagrx web site
 
 Django site of the bioinformatics group of the University of Granada. It hosts **miSRA** (public small-RNA
-sequencing experiments processed with sRNAbench); further services will follow.
+sequencing experiments processed with sRNAbench) and the new **sRNAtoolbox** (in progress).
 
 - Dev: https://bioinfo5.ugr.es/dev/ (miSRA at `/dev/misra/`, API help at `/dev/misra/api/`)
 - Deployment, settings and server layout: [deploy/README.md](deploy/README.md)
@@ -19,6 +19,7 @@ sequencing experiments processed with sRNAbench); further services will follow.
 | `misra/views.py`, `query.py`, `cart.py` | browse, taxonomy, detail pages, cart and saved selections |
 | `jobs/` | job system shared by the services: Job model, tool registry, Celery task, job page and result files, cleanup |
 | `misra/tools.py`, `forms.py`, `runners.py`, `views_tools.py` | miSRA tools (download, matrix, sRNAbench) registered with `jobs` |
+| `srnatoolbox/` | sRNAtoolbox at `/srnatoolbox/`: home, about/cite, tool pages (sRNAbench and sRNAde in progress) |
 | `misra/api/` | API v1 (`docs.py` describes the endpoints and drives the help page) |
 | `misra/expression.py` | reading expression values from misradb2 |
 | `deploy/` | gunicorn, supervisor, Apache configs; conda env for srnatoolbox; misra_storage sync |
@@ -26,7 +27,7 @@ sequencing experiments processed with sRNAbench); further services will follow.
 ## Tests
 
 ```bash
-python manage.py test --settings=config.settings_test jobs misra
+python manage.py test --settings=config.settings_test jobs misra srnatoolbox
 ```
 
 The test settings use SQLite and an in-memory cache. `config/settings.py` still reads an env file, so set

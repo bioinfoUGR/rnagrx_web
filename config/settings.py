@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "misradb",
     "jobs",
     "misra",
+    "srnatoolbox",
 ]
 
 MIDDLEWARE = [

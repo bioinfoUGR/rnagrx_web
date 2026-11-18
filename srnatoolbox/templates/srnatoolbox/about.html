@@ -1,0 +1,33 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% block page_title %}About & cite{% endblock %}
+{% block srnatoolbox_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">About</p>
+    <h1 class="h3">About sRNAtoolbox</h1>
+  </div>
+</section>
+<div class="prose">
+  <p>sRNAtoolbox is developed by the bioinformatics group of the University of Granada. The analyses run on our
+    servers with the same programs that you can install yourself (see the <a href="{{ github }}">code repository</a>).</p>
+  <p>No account is needed. Every job has a private link, which is the only way to reach it: bookmark it to come
+    back later. Uploaded files and results are deleted after {{ max_age_days }} days.</p>
+
+  <h2 class="h5 mt-4">How to cite</h2>
+  <p>If you use sRNAtoolbox in your work, please cite:</p>
+  <ul class="cite-list">
+    {% for title, journal, url in citations %}<li>{{ title }}. <i>{{ journal }}</i>. <a href="{{ url }}">{{ url }}</a></li>{% endfor %}
+  </ul>
+  <p>Please also consider citing the programs and databases the analysis used:</p>
+  <ul class="cite-list">
+    {% for title, journal, url in also_cite %}<li>{{ title }}. <i>{{ journal }}</i>. <a href="{{ url }}">{{ url }}</a></li>{% endfor %}
+  </ul>
+
+  <h2 class="h5 mt-4">Links</h2>
+  <ul>
+    <li><a href="{{ manual }}">Manual</a></li>
+    <li><a href="{{ github }}">Code repository</a> · <a href="{{ github }}/issues">report an issue</a></li>
+    <li><a href="{{ old_site }}">Previous version of sRNAtoolbox</a></li>
+  </ul>
+</div>
+{% endblock %}

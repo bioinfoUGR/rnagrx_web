@@ -1,0 +1,16 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% block page_title %}{{ tool.label }}{% endblock %}
+{% block srnatoolbox_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow"><a href="{% url 'srnatoolbox:home' %}">Tools</a></p>
+    <h1 class="h3">{{ tool.title }}</h1>
+    <p class="text-secondary mb-0 prose">{{ tool.description }}</p>
+  </div>
+</section>
+{% if not tool.enabled %}
+<div class="no-results"><h2 class="h5">This tool is coming soon.</h2>
+  <p class="mb-0">{{ tool.blocked|default:"It is being rebuilt for the new sRNAtoolbox." }}
+    Until then, please use <a href="{{ old_site }}">the previous version</a>.</p></div>
+{% endif %}
+{% endblock %}

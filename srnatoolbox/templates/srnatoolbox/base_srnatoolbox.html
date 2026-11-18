@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% block page_title %}sRNAtoolbox{% endblock %} · sRNAtoolbox{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'srnatoolbox/srnatoolbox.css' %}">{% endblock %}
+{% block brand %}
+<a class="navbar-brand" href="{% url 'srnatoolbox:home' %}"><span class="brand-srna">sRNA</span>toolbox</a>
+{% endblock %}
+{% block nav %}
+{% with name=request.resolver_match.url_name %}
+<ul class="navbar-nav me-auto">
+  <li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle {% if name == 'tool' or name == 'job' %}active{% endif %}" href="{% url 'srnatoolbox:home' %}"
+       role="button" data-bs-toggle="dropdown" aria-expanded="false">Tools</a>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item" href="{% url 'srnatoolbox:tool' 'srnabench' %}">sRNAbench: profiling</a></li>
+      <li><a class="dropdown-item" href="{% url 'srnatoolbox:tool' 'srnade' %}">sRNAde: differential expression</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="{% url 'srnatoolbox:home' %}#your-jobs">All tools and your jobs</a></li>
+    </ul>
+  </li>
+  <li class="nav-item"><a class="nav-link" href="https://arn.ugr.es/toolbox_doc">Manual</a></li>
+  <li class="nav-item"><a class="nav-link {% if name == 'about' %}active{% endif %}" href="{% url 'srnatoolbox:about' %}">About &amp; cite</a></li>
+</ul>
+<a class="nav-link small text-secondary ms-3" href="{% url 'core:landing' %}">All services</a>
+{% endwith %}
+{% endblock %}
+{% block content %}{% block srnatoolbox_content %}{% endblock %}{% endblock %}

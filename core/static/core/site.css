@@ -26,3 +26,29 @@ main { flex: 1 0 auto; }
 
 .htmx-indicator { opacity: 0; transition: opacity .2s; }
 .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
+
+/* shared page parts (page heads, cards, tables, tool forms, jobs) */
+.eyebrow { text-transform: uppercase; letter-spacing: .06em; font-size: .75rem; font-weight: 600; color: var(--site-accent); margin-bottom: .25rem; }
+.stat-row { display: flex; flex-wrap: wrap; gap: 1rem; }
+.stat-row > div { background: #fff; border: 1px solid #dde2e7; border-radius: .5rem; padding: .75rem 1.25rem; min-width: 9rem; }
+.stat-row strong { display: block; font-size: 1.5rem; color: var(--site-accent); }
+.stat-row span { color: var(--site-muted); font-size: .85rem; }
+.entry-card { text-decoration: none; color: inherit; border: 1px solid #dde2e7; transition: border-color .15s, box-shadow .15s; }
+.entry-card:hover { border-color: var(--site-accent); box-shadow: 0 .25rem .75rem rgba(31, 95, 139, .12); }
+.entry-card h2 { color: var(--site-accent); }
+.page-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: 1rem; }
+.results-table { background: #fff; font-size: .85rem; }
+.results-table th { white-space: nowrap; font-size: .8rem; color: var(--site-muted); }
+.results-table th.sortable a { color: inherit; text-decoration: none; }
+.results-table th.sortable a:hover { color: var(--site-accent); }
+.results-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.results-table code { color: #173f5c; }
+.no-results { background: #fff; border: 1px dashed #c8d3dd; border-radius: .5rem; padding: 2rem; text-align: center; margin: 1rem 0; }
+.kv-table th { width: 40%; font-weight: 600; color: var(--site-muted); font-size: .85rem; }
+.kv-table td { font-size: .9rem; }
+.prose { max-width: 48rem; }
+.tool-form { max-width: 60rem; }
+.disabled-card { opacity: .65; }
+.job-log { background: #fff; border: 1px solid #dde2e7; border-radius: .375rem; padding: .6rem .8rem;
+  font-size: .78rem; max-height: 22rem; overflow: auto; white-space: pre-wrap; }
+.job-error { white-space: pre-wrap; }

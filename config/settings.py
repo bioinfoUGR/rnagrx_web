@@ -178,6 +178,13 @@ UPLOAD_SESSION_MAX_GB = env.int("UPLOAD_SESSION_MAX_GB", default=30)  # uploads 
 UPLOAD_CHUNK_MB = env.int("UPLOAD_CHUNK_MB", default=16)
 UPLOAD_MAX_AGE_HOURS = env.int("UPLOAD_MAX_AGE_HOURS", default=48)  # unused uploads are deleted after this
 SCRATCH_MIN_FREE_GB = env.int("SCRATCH_MIN_FREE_GB", default=100)  # refuse uploads below this free space
+# datasets: read files uploaded/linked once, used by several jobs
+DATASET_DIR = Path(env.str("DATASET_DIR", default=str(SCRATCH_DIR / "datasets")))
+DATASET_MAX_GB = env.int("DATASET_MAX_GB", default=200)
+DATASET_SESSION_MAX_GB = env.int("DATASET_SESSION_MAX_GB", default=400)  # all datasets created by one browser
+DATASET_MAX_AGE_DAYS = env.int("DATASET_MAX_AGE_DAYS", default=14)  # after the last use (file added, job)
+ARCHIVE_MAX_MEMBERS = env.int("ARCHIVE_MAX_MEMBERS", default=5000)
+TRANSFER_QUEUE = env.str("TRANSFER_QUEUE", default="rnagrx_transfer")  # link downloads and unpacking
 
 # miSRA tools: max experiments per job, sRNAbench resources
 MISRA_LIMIT_MATRIX = env.int("MISRA_LIMIT_MATRIX", default=20_000)

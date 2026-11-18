@@ -18,10 +18,13 @@
       <li><a class="dropdown-item" href="{% url 'srnatoolbox:home' %}#your-jobs">All tools and your jobs</a></li>
     </ul>
   </li>
+  <li class="nav-item"><a class="nav-link {% if name == 'data' or name == 'dataset' %}active{% endif %}" href="{% url 'srnatoolbox:data' %}">My data</a></li>
   <li class="nav-item"><a class="nav-link" href="https://arn.ugr.es/toolbox_doc">Manual</a></li>
   <li class="nav-item"><a class="nav-link {% if name == 'about' %}active{% endif %}" href="{% url 'srnatoolbox:about' %}">About &amp; cite</a></li>
 </ul>
 <a class="nav-link small text-secondary ms-3" href="{% url 'core:landing' %}">All services</a>
 {% endwith %}
 {% endblock %}
-{% block content %}{% block srnatoolbox_content %}{% endblock %}{% endblock %}
+{% block content %}
+{% for m in messages %}<div class="alert {% if m.level_tag == 'error' %}alert-danger{% else %}alert-success{% endif %} py-2" role="status">{{ m }}</div>{% endfor %}
+{% block srnatoolbox_content %}{% endblock %}{% endblock %}

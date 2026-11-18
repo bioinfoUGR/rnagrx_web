@@ -1,0 +1,102 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% load humanize static %}
+{% block page_title %}{{ ds.title }}{% endblock %}
+{% block srnatoolbox_content %}
+<div id="dataset" data-slug="{{ ds.slug }}"
+     data-upload-start="{% url 'jobs:upload_start' %}"
+     data-upload-chunk="{% url 'jobs:upload_chunk' 'TOKEN' %}"
+     data-upload-status="{% url 'jobs:upload_status' 'TOKEN' %}"
+     data-upload-finish="{% url 'jobs:upload_finish' 'TOKEN' %}"
+     data-cells="{% url 'srnatoolbox:dataset_cells' ds.slug %}">
+
+<section class="page-head">
+  <div>
+    <p class="eyebrow"><a href="{% url 'srnatoolbox:data' %}">My data</a> · dataset</p>
+    <h1 class="h3 mb-1">{{ ds.title }}</h1>
+    <p class="small text-secondary mb-0">Dataset <code>{{ ds.slug }}</code> · kept until {{ ds.expires_at|date:"j F Y" }}
+      ({{ max_age_days }} days after the last use). Anyone with this link can use the data: bookmark it, do not post it.</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <button class="btn btn-sm btn-outline-primary" type="button" data-copy="{{ request.build_absolute_uri }}">Copy link</button>
+    <details class="dataset-menu">
+      <summary class="btn btn-sm btn-outline-primary">Rename</summary>
+      <form method="post" action="{% url 'srnatoolbox:dataset_rename' ds.slug %}" class="d-flex gap-2 mt-2">
+        {% csrf_token %}<input name="title" class="form-control form-control-sm" value="{{ ds.title }}" maxlength="200" aria-label="New name">
+        <button class="btn btn-sm btn-primary" type="submit">Save</button>
+      </form>
+    </details>
+    <form method="post" action="{% url 'srnatoolbox:dataset_delete' ds.slug %}"
+          onsubmit="return confirm('Delete this dataset and all its files? Job results stay available.');">
+      {% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Delete dataset</button>
+    </form>
+  </div>
+</section>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <section class="card h-100"><div class="card-body">
+      <h2 class="h5">Add files</h2>
+      <p class="small text-secondary">FASTQ, FASTA or read count files, plain or gzip/bzip2 compressed, up to
+        {{ file_gb }} GB each, or archives (ZIP, tar, tar.gz, tar.bz2, tar.xz) holding such files. An interrupted
+        upload continues where it stopped when you choose the same file again.</p>
+      <div class="drop-zone" id="drop-zone">
+        <p class="fw-semibold mb-2">Drop files or folders here</p>
+        <label class="btn btn-sm btn-outline-primary mb-0" for="pick-files">Choose files…</label>
+        <label class="btn btn-sm btn-outline-primary mb-0" for="pick-folder">Choose a folder…</label>
+        <input id="pick-files" type="file" multiple class="visually-hidden">
+        <input id="pick-folder" type="file" webkitdirectory multiple class="visually-hidden">
+      </div>
+      <form class="mt-3" hx-post="{% url 'srnatoolbox:dataset_links' ds.slug %}" hx-target="#transfers" hx-swap="outerHTML"
+            hx-on::after-request="if(event.detail.successful) this.reset()">
+        <label class="form-label small fw-semibold mb-1" for="links">Or links, one per line</label>
+        <div class="d-flex gap-2 align-items-start">
+          <textarea id="links" name="links" class="form-control form-control-sm" rows="2"
+                    placeholder="https://www.dropbox.com/scl/fi/…/batch2.tar.gz?dl=0"></textarea>
+          <button class="btn btn-sm btn-outline-primary" type="submit">Add links</button>
+        </div>
+        <p class="small text-secondary mt-1 mb-0">Dropbox, Google Drive, OneDrive and Nextcloud share links, or any
+          public http(s) or ftp link. The server downloads them; you can close this page meanwhile.</p>
+      </form>
+    </div></section>
+  </div>
+  <div class="col-lg-5">
+    <section class="card h-100"><div class="card-body">
+      <h2 class="h5">Transfers</h2>
+      <ul class="list-unstyled transfer-list mb-0" id="upload-list" aria-live="polite"></ul>
+      {% include "srnatoolbox/_dataset_transfers.html" %}
+    </div></section>
+  </div>
+</div>
+
+{% include "srnatoolbox/_dataset_samples.html" %}
+
+{% if jobs %}
+<section class="card mt-3"><div class="card-body">
+  <h2 class="h5">Jobs on this dataset</h2>
+  <div class="table-responsive">
+  <table class="table table-sm results-table mb-0">
+    <thead><tr><th>Job</th><th>Tool</th><th class="num">Samples</th><th>Status</th><th>Started</th></tr></thead>
+    <tbody>{% for j in jobs %}
+      <tr><td><a href="{{ j.get_absolute_url }}"><code>{{ j.slug }}</code></a></td><td>{{ j.tool_info.label|default:j.tool }}</td>
+        <td class="num">{{ j.n_items|intcomma }}</td><td>{% include "jobs/_job_badge.html" with job=j %}</td>
+        <td>{{ j.created_at|date:"j M H:i" }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  </div>
+</div></section>
+{% endif %}
+
+<form id="run-form" method="get" action="{% url 'srnatoolbox:tool' 'srnabench' %}" class="action-bar">
+  <input type="hidden" name="dataset" value="{{ ds.slug }}">
+  <div>
+    <div class="fw-semibold"><span id="sel-count">0</span> of <span id="sel-total">{{ rows|length }}</span> samples selected · <span id="sel-size">0 B</span></div>
+    <div class="small text-secondary">Choose samples in the table; uploads still running are added when complete.</div>
+  </div>
+  <button class="btn btn-primary" type="submit" id="run-button" disabled>Profile with sRNAbench →</button>
+</form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'srnatoolbox/upload.js' %}"></script>
+<script src="{% static 'srnatoolbox/dataset.js' %}"></script>
+{% endblock %}

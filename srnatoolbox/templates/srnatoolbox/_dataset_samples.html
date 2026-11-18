@@ -1,0 +1,98 @@
+{% load humanize %}
+<section class="card mt-3" id="samples" hx-get="{% url 'srnatoolbox:dataset_samples' ds.slug %}" hx-trigger="samples-changed from:body"
+         hx-swap="outerHTML"><div class="card-body">
+  <div class="d-flex flex-wrap gap-2 align-items-end justify-content-between">
+    <div>
+      <h2 class="h5 mb-1">Samples</h2>
+      <p class="small text-secondary mb-0">One sample per file, named after the file. Edit names and annotations in the
+        table (changes are saved at once), paste a column from a spreadsheet, or use a sample sheet.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <div class="dropdown">
+        <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Download sample sheet</button>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="{% url 'srnatoolbox:dataset_sheet' ds.slug 'xlsx' %}">Excel (.xlsx)</a></li>
+          <li><a class="dropdown-item" href="{% url 'srnatoolbox:dataset_sheet' ds.slug 'tsv' %}">Tab-separated (.tsv)</a></li>
+          <li><a class="dropdown-item" href="{% url 'srnatoolbox:dataset_sheet' ds.slug 'csv' %}">Comma-separated (.csv)</a></li>
+        </ul>
+      </div>
+      <form hx-post="{% url 'srnatoolbox:dataset_sheet_upload' ds.slug %}" hx-target="#samples" hx-swap="outerHTML"
+            hx-encoding="multipart/form-data" hx-trigger="change">
+        <label class="btn btn-sm btn-outline-primary mb-0" for="sheet-file">Upload sample sheet…</label>
+        <input id="sheet-file" name="sheet" type="file" accept=".tsv,.csv,.txt,.xlsx" class="visually-hidden">
+      </form>
+    </div>
+  </div>
+
+  {% if sheet_error %}<div class="alert alert-danger py-2 mt-3 mb-0 small">{{ sheet_error }}</div>{% endif %}
+  {% if samples_note %}<div class="alert alert-success py-2 mt-3 mb-0 small">{{ samples_note }}</div>{% endif %}
+  {% if samples_error %}<div class="alert alert-danger py-2 mt-3 mb-0 small">{{ samples_error }}</div>{% endif %}
+  {% if pending %}
+  <div class="sheet-preview mt-3">
+    <p class="mb-1"><strong>{{ pending.filename }}</strong>: {{ pending.n_rows }} row{{ pending.n_rows|pluralize }},
+      {{ pending.samples|length }} sample{{ pending.samples|length|pluralize }}{% if pending.columns %}, columns
+      {% for c in pending.columns %}<span class="badge text-bg-light border">{{ c }}</span> {% endfor %}{% endif %}.</p>
+    {% if pending.n_errors %}
+    <p class="text-danger mb-1">{{ pending.n_errors }} problem{{ pending.n_errors|pluralize }}; correct the sheet and upload it again:</p>
+    <ul class="small text-danger mb-2">{% for row, msg in pending.errors %}<li>row {{ row }}: {{ msg }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if pending.unlisted %}<p class="small text-secondary mb-2">{{ pending.unlisted|length }} file{{ pending.unlisted|length|pluralize }} not in the sheet
+      ({{ pending.unlisted|slice:":5"|join:", " }}{% if pending.unlisted|length > 5 %}, …{% endif %}) will keep a sample of their own.</p>{% endif %}
+    <form hx-post="{% url 'srnatoolbox:dataset_sheet_apply' ds.slug %}" hx-target="#samples" hx-swap="outerHTML" class="d-flex gap-2">
+      <button class="btn btn-sm btn-primary" type="submit" {% if pending.n_errors %}disabled{% endif %}>Apply: replace the samples</button>
+      <button class="btn btn-sm btn-outline-secondary" type="submit" name="cancel" value="1">Cancel</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if rows %}
+  <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
+    <input class="form-control form-control-sm sample-filter" type="search" placeholder="Filter, e.g. CRC or group:tumour" aria-label="Filter samples" id="sample-filter">
+    <span class="small"><a href="#" data-select="all">select all</a> · <a href="#" data-select="none">none</a> · <a href="#" data-select="visible">only the visible</a></span>
+    <span class="small text-secondary ms-auto" id="cell-status" aria-live="polite"></span>
+  </div>
+  <div class="table-responsive mt-2">
+  <table class="table table-sm results-table align-middle sample-table" id="sample-table">
+    <thead><tr>
+      <th><input type="checkbox" class="form-check-input" id="select-all" aria-label="Select all samples"></th>
+      <th>Name</th><th>File</th><th class="num">Size</th><th>Format</th>
+      {% for c in ds.columns %}<th class="col-head">{{ c }}
+        <button class="btn btn-link btn-sm p-0 ms-1 text-secondary" type="button" title="Remove column {{ c }}" aria-label="Remove column {{ c }}"
+                hx-post="{% url 'srnatoolbox:dataset_columns' ds.slug %}" hx-vals='{"remove": "{{ c|escapejs }}"}' hx-target="#samples" hx-swap="outerHTML"
+                hx-confirm="Remove the column {{ c }} and its values?">×</button></th>{% endfor %}
+      <th class="add-col">
+        <form hx-post="{% url 'srnatoolbox:dataset_columns' ds.slug %}" hx-target="#samples" hx-swap="outerHTML" class="d-flex gap-1">
+          <input name="name" class="form-control form-control-sm" placeholder="New column" aria-label="New column name" maxlength="64" required>
+          <button class="btn btn-sm btn-outline-primary" type="submit" aria-label="Add column">+</button>
+        </form>
+        {% if column_error %}<div class="small text-danger fw-normal">{{ column_error }}</div>{% endif %}
+      </th>
+    </tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr data-id="{{ r.sample.pk }}" data-size="{{ r.size }}" data-search="{{ r.sample.name|lower }} {% for f in r.files %}{{ f.name|lower }} {% endfor %}{% for c, v in r.sample.annotations.items %}{{ c|lower }}:{{ v|lower }} {{ v|lower }} {% endfor %}">
+        <td><input type="checkbox" class="form-check-input" name="s" value="{{ r.sample.pk }}" form="run-form" aria-label="Select {{ r.sample.name }}"></td>
+        <td><input class="cell" data-field="name" value="{{ r.sample.name }}" aria-label="Name of sample {{ forloop.counter }}" maxlength="64"></td>
+        <td class="file-cell">{% for f in r.files %}<code>{{ f.name }}</code>{% if not forloop.last %}<br>{% endif %}{% endfor %}
+          {% if r.files|length > 1 %}<div class="small text-secondary">{{ r.files|length }} files, merged</div>{% endif %}</td>
+        <td class="num">{{ r.size|filesizeformat }}</td>
+        <td class="text-nowrap">{{ r.files.0.file_format }}</td>
+        {% for v in r.values %}<td><input class="cell" data-field="column" data-column="{{ forloop.counter0 }}" value="{{ v }}" aria-label="sample {{ r.sample.name }}"></td>{% endfor %}
+        <td></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {{ ds.columns|json_script:"sample-columns" }}
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <button class="btn btn-sm btn-outline-danger" type="button" hx-post="{% url 'srnatoolbox:dataset_remove' ds.slug %}"
+            hx-include="#sample-table input[name=s]:checked" hx-target="#samples" hx-swap="outerHTML"
+            hx-confirm="Remove the selected samples and delete their files from this dataset?" {% if busy %}disabled title="A job is using this dataset"{% endif %}>Remove selected samples</button>
+    <span class="small text-secondary">{{ rows|length|intcomma }} sample{{ rows|length|pluralize }} · {{ total_size|filesizeformat }}.
+      Sample sheet: columns <code>file</code> and <code>name</code>, then any annotation columns; several files of one sample in one cell, separated by <code>;</code>.</span>
+  </div>
+  {% else %}
+  <p class="text-secondary mt-3 mb-0">No samples yet. Files appear here as soon as they are complete.</p>
+  {% endif %}
+</div></section>

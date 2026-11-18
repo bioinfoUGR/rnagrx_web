@@ -1,6 +1,8 @@
 """Chunked, resumable upload of large read files from the browser.
 
-1. POST  start/            name, size            -> {token, chunk_size, received}
+1. POST  start/            name, size[, dataset] -> {token, chunk_size, received}
+   With a dataset slug, the complete file goes into that dataset (jobs/datasets.py), and starting the same
+   file (name and size) again from the same browser continues the unfinished upload.
 2. PUT   <token>/chunk/?offset=N   raw bytes      -> {received}   (offset must equal the bytes received so far)
 3. GET   <token>/                                 -> {received, size, status, ...}  (to resume)
 4. POST  <token>/finish/                          -> {status, format}  (size and file format are checked)
@@ -19,8 +21,8 @@ from django.db.models import Sum
 from django.http import Http404, JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from .models import Upload
-from .readfiles import NotReads, allowed_name, sniff
+from .models import Dataset, Upload
+from .readfiles import NotReads, allowed_name, archive_name, is_archive, safe_name, sniff  # noqa: F401
 
 SESSION_UPLOADS = "uploads"
 SESSION_UPLOADS_MAX = 500
@@ -34,13 +36,7 @@ def _error(message: str, status: int = 400, **extra) -> JsonResponse:
 
 def _describe(u: Upload) -> dict:
     return {"token": u.token, "filename": u.filename, "size": u.size, "received": u.received, "status": u.status,
-            "format": u.file_format, "message": u.message}
-
-
-def safe_name(name: str) -> str:
-    base = os.path.basename(name.replace("\\", "/"))
-    base = re.sub(r"[^A-Za-z0-9._-]", "_", base).lstrip(".")[-120:]
-    return base or "reads"
+            "format": u.file_format, "message": u.message, "chunk_size": settings.UPLOAD_CHUNK_MB * 1024 * 1024}
 
 
 def _session_tokens(request) -> list[str]:
@@ -60,8 +56,13 @@ def _remove_files(u: Upload) -> None:
     shutil.rmtree(u.directory(), ignore_errors=True)
 
 
+READS_HELP = ("please upload FASTQ, FASTA or read/count files (.fastq, .fq, .fa, .fasta, .txt, .tsv, .csv), "
+              "optionally compressed with gzip (.gz) or bzip2 (.bz2)")
+
+
 @require_POST
 def start(request):
+    from .datasets import DatasetError, check_new_bytes
     name = (request.POST.get("name") or "").strip()
     try:
         size = int(request.POST.get("size", ""))
@@ -69,33 +70,54 @@ def start(request):
         return _error("The file size is missing.")
     if not name:
         return _error("The file name is missing.")
-    if not allowed_name(name):
-        return _error(f"{name}: please upload FASTQ, FASTA or read/count files (.fastq, .fq, .fa, .fasta, .txt, "
-                      ".tsv, .csv), optionally compressed with gzip (.gz) or bzip2 (.bz2).")
+    ds = None
+    if request.POST.get("dataset"):
+        ds = Dataset.objects.filter(slug=request.POST["dataset"], deleted_at__isnull=True).first()
+        if ds is None:
+            return _error("This dataset does not exist any more.", status=404)
+    archive = ds is not None and archive_name(name)
+    if not archive and not allowed_name(name):
+        if ds is not None:
+            return _error(f"{name}: {READS_HELP}, or archives of such files (.zip, .tar, .tar.gz, .tgz, .tar.bz2, "
+                          ".tar.xz).")
+        return _error(f"{name}: {READS_HELP}.")
     if size <= 0:
         return _error(f"{name} is empty.")
-    max_file = settings.UPLOAD_MAX_GB * GB
-    if size > max_file:
+    if not archive and size > settings.UPLOAD_MAX_GB * GB:
         return _error(f"{name} is larger than {settings.UPLOAD_MAX_GB} GB, the limit per file. Compressing it with "
                       "gzip usually reduces FASTQ files to a quarter.")
     if not request.session.session_key:
         request.session.save()
     session_key = request.session.session_key
-    pending = Upload.objects.filter(session_key=session_key, status__in=[Upload.UPLOADING, Upload.COMPLETE]) \
-        .aggregate(total=Sum("size"))["total"] or 0
-    if pending + size > settings.UPLOAD_SESSION_MAX_GB * GB:
-        return _error(f"Your uploads waiting for a job would exceed {settings.UPLOAD_SESSION_MAX_GB} GB. "
-                      "Start a job with the files already uploaded, or remove some of them.")
+
+    if ds is not None:
+        # the same file again from this browser: continue where it stopped
+        same = Upload.objects.filter(session_key=session_key, dataset=ds, filename=name[:255], size=size,
+                                     status=Upload.UPLOADING).first()
+        if same is not None and same.path().is_file() and same.token in _session_tokens(request):
+            return JsonResponse(_describe(same))
+        try:
+            check_new_bytes(ds, size)
+        except DatasetError as exc:
+            return _error(str(exc), status=507 if "disk space" in str(exc) else 400)
+    else:
+        pending = Upload.objects.filter(session_key=session_key, dataset__isnull=True,
+                                        status__in=[Upload.UPLOADING, Upload.COMPLETE]) \
+            .aggregate(total=Sum("size"))["total"] or 0
+        if pending + size > settings.UPLOAD_SESSION_MAX_GB * GB:
+            return _error(f"Your uploads waiting for a job would exceed {settings.UPLOAD_SESSION_MAX_GB} GB. "
+                          "Start a job with the files already uploaded, or remove some of them.")
     upload_dir = settings.UPLOAD_DIR
     upload_dir.mkdir(parents=True, exist_ok=True)
     if shutil.disk_usage(upload_dir).free - size < settings.SCRATCH_MIN_FREE_GB * GB:
         return _error("The server is short of disk space at the moment. Please try again later.", status=503)
 
-    u = Upload.objects.create(session_key=session_key, filename=name[:255], stored_name=safe_name(name), size=size)
+    u = Upload.objects.create(session_key=session_key, filename=name[:255], stored_name=safe_name(name), size=size,
+                              dataset=ds)
     u.directory().mkdir(parents=True)
     u.path().touch()
     request.session[SESSION_UPLOADS] = (_session_tokens(request) + [u.token])[-SESSION_UPLOADS_MAX:]
-    return JsonResponse({**_describe(u), "chunk_size": settings.UPLOAD_CHUNK_MB * 1024 * 1024})
+    return JsonResponse(_describe(u))
 
 
 @require_http_methods(["PUT"])
@@ -148,14 +170,20 @@ def finish(request, token):
         return _error(f"The upload is incomplete ({u.received:,} of {u.size:,} bytes).", status=409,
                       received=u.received)
     try:
-        u.file_format = sniff(u.path())
+        u.file_format = "archive" if u.dataset_id and is_archive(u.path()) else sniff(u.path())
         u.status = Upload.COMPLETE
     except NotReads as exc:
         u.status = Upload.FAILED
         u.message = f"{u.filename}: {exc}"[:500]
         _remove_files(u)
     u.save(update_fields=["status", "file_format", "message", "updated_at"])
-    return JsonResponse(_describe(u), status=200 if u.status == Upload.COMPLETE else 400)
+    if u.status != Upload.COMPLETE:
+        return JsonResponse(_describe(u), status=400)
+    if u.dataset_id:
+        from .datasets import add_upload
+        df = add_upload(u)
+        return JsonResponse({**_describe(u), "file": df.tag, "file_status": df.status, "file_name": df.name})
+    return JsonResponse(_describe(u))
 
 
 @require_POST

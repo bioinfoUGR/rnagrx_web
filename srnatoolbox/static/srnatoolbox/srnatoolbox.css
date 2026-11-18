@@ -6,3 +6,25 @@
 .planned-list li { padding: .5rem .9rem; border-top: 1px solid #eef0f3; }
 .planned-list li:first-child { border-top: 0; }
 .cite-list li { margin-bottom: .6rem; }
+
+/* datasets */
+.drop-zone { border: 2px dashed #c8d3dd; border-radius: .5rem; padding: 1.1rem; text-align: center; background: #fbfcfd; }
+.drop-zone.drag { border-color: var(--site-accent, #1f5f8b); background: #eef5fa; }
+.transfer-list { font-size: .85rem; display: flex; flex-direction: column; gap: .6rem; }
+.transfer-list .progress { height: .4rem; margin-top: .25rem; }
+#upload-list:not(:empty) { margin-bottom: .6rem !important; }
+.sample-filter { max-width: 20rem; }
+.sample-table td { padding-top: .2rem; padding-bottom: .2rem; }
+.sample-table .cell { width: 100%; min-width: 6rem; border: 1px solid transparent; border-radius: .25rem; padding: .15rem .35rem;
+  background: transparent; font: inherit; }
+.sample-table .cell:hover { border-color: #dde2e7; }
+.sample-table .cell:focus { border-color: var(--site-accent, #1f5f8b); background: #fff; outline: 2px solid rgba(31, 95, 139, .15); }
+.sample-table .cell.is-invalid { border-color: #b02a37; background: #fff5f5; }
+.sample-table .file-cell code { font-size: .8rem; word-break: break-all; }
+.sample-table .add-col { min-width: 11rem; }
+.sheet-preview { border: 1px solid #b9d3e6; background: #f2f8fc; border-radius: .375rem; padding: .75rem 1rem; font-size: .9rem; }
+.dataset-menu summary { list-style: none; }
+.dataset-menu summary::-webkit-details-marker { display: none; }
+.action-bar { position: sticky; bottom: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
+  justify-content: space-between; margin-top: 1rem; background: #fff; border: 1px solid #dde2e7; border-radius: .5rem;
+  padding: .8rem 1.2rem; box-shadow: 0 -2px 8px rgba(0, 0, 0, .05); }

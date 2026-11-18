@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Job, Upload
+from .models import DataFile, Dataset, Job, Sample, Upload
 
 
 @admin.register(Job)
@@ -19,3 +19,27 @@ class UploadAdmin(admin.ModelAdmin):
     list_filter = ("status",)
     search_fields = ("token", "filename")
     readonly_fields = [f.name for f in Upload._meta.fields]
+
+
+class DataFileInline(admin.TabularInline):
+    model = DataFile
+    fields = ("tag", "name", "size", "file_format", "source", "status", "message")
+    readonly_fields = fields
+    extra = 0
+    can_delete = False
+
+
+@admin.register(Dataset)
+class DatasetAdmin(admin.ModelAdmin):
+    list_display = ("slug", "title", "app", "created_at", "last_used_at", "deleted_at")
+    list_filter = ("app",)
+    search_fields = ("slug", "title")
+    readonly_fields = ("slug", "app", "session_key", "created_at", "deleted_at")
+    inlines = [DataFileInline]
+
+
+@admin.register(Sample)
+class SampleAdmin(admin.ModelAdmin):
+    list_display = ("name", "dataset", "position")
+    search_fields = ("name", "dataset__slug")
+    raw_id_fields = ("dataset",)

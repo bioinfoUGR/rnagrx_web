@@ -1,0 +1,7 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% block page_title %}Dataset deleted{% endblock %}
+{% block srnatoolbox_content %}
+<div class="no-results"><h1 class="h5">This dataset was deleted.</h1>
+  <p class="mb-0">“{{ ds.title }}” was deleted on {{ ds.deleted_at|date:"j F Y" }}, either by a user or
+    {{ max_age_days }} days after its last use. <a href="{% url 'srnatoolbox:data' %}">Start a new dataset</a>.</p></div>
+{% endblock %}

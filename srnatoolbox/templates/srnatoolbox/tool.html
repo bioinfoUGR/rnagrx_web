@@ -8,6 +8,10 @@
     <p class="text-secondary mb-0 prose">{{ tool.description }}</p>
   </div>
 </section>
+{% if selection %}
+<p class="alert alert-info py-2">Selected: {{ selection.n }} sample{{ selection.n|pluralize }} of dataset
+  <a href="{{ selection.ds.get_absolute_url }}">{{ selection.ds.title }}</a>.</p>
+{% endif %}
 {% if not tool.enabled %}
 <div class="no-results"><h2 class="h5">This tool is coming soon.</h2>
   <p class="mb-0">{{ tool.blocked|default:"It is being rebuilt for the new sRNAtoolbox." }}

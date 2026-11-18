@@ -48,3 +48,17 @@ def run_job(job_id: int) -> None:
 def submit(job: Job) -> None:
     """Queue a job on the queue of its tool."""
     run_job.apply_async((job.pk,), queue=job.tool_info.queue)
+
+
+# dataset transfers (queue TRANSFER_QUEUE, see jobs/datasets.py)
+
+@shared_task(acks_late=True)
+def fetch_link(file_id: int) -> None:
+    from .datasets import run_fetch_link
+    run_fetch_link(file_id)
+
+
+@shared_task(acks_late=True)
+def unpack_archive(file_id: int) -> None:
+    from .datasets import run_unpack
+    run_unpack(file_id)

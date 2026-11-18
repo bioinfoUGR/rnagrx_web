@@ -1,0 +1,34 @@
+{% load humanize %}
+<div id="transfers" hx-get="{% url 'srnatoolbox:dataset_transfers' ds.slug %}?ready={{ n_ready }}" hx-swap="outerHTML"
+     hx-trigger="{% if polling %}every 2s, {% endif %}transfers-changed from:body">
+  {% if links_added %}<p class="small text-success mb-2">{{ links_added }} link{{ links_added|pluralize }} added; downloading.</p>{% endif %}
+  {% for e in link_errors %}<p class="small text-danger mb-1">{{ e }}</p>{% endfor %}
+  <ul class="list-unstyled transfer-list mb-0">
+    {% for a in active %}
+    <li>
+      <div class="d-flex justify-content-between gap-2"><span class="text-truncate"><code>{{ a.df.name }}</code></span>
+        <span class="text-nowrap">{% if a.df.status == "unpacking" %}unpacking · {{ a.done|filesizeformat }} written{% else %}downloading · {{ a.done|filesizeformat }}{% endif %}</span></div>
+      <div class="progress" role="progressbar" aria-label="{{ a.df.name }}"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div></div>
+    </li>
+    {% endfor %}
+    {% for x in other_uploads %}
+    <li>
+      <div class="d-flex justify-content-between gap-2"><span class="text-truncate"><code>{{ x.u.filename }}</code></span>
+        <span class="text-nowrap">{{ x.u.received|filesizeformat }} of {{ x.u.size|filesizeformat }}</span></div>
+      <div class="small text-secondary">{% if x.mine %}interrupted: choose the same file again to continue{% elif x.stale %}upload from another browser, interrupted{% else %}uploading from another browser{% endif %}</div>
+    </li>
+    {% endfor %}
+    {% for df in finished %}
+    <li>
+      <div class="d-flex justify-content-between gap-2"><span class="text-truncate"><code>{{ df.name }}</code></span>
+        {% if df.status == "unpacked" %}<span class="text-success fw-semibold text-nowrap">✓ unpacked</span>{% else %}<span class="text-danger fw-semibold text-nowrap">failed</span>{% endif %}</div>
+      <div class="small {% if df.status == 'failed' %}text-danger{% else %}text-secondary{% endif %}">{{ df.message }}</div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% if finished %}
+  <button class="btn btn-link btn-sm px-0" type="button" hx-post="{% url 'srnatoolbox:dataset_transfers_clear' ds.slug %}"
+          hx-target="#transfers" hx-swap="outerHTML">Clear finished transfers</button>
+  {% endif %}
+  {% if not active and not other_uploads and not finished %}<p class="small text-secondary mb-0 transfers-empty">Downloads of links and unpacking of archives are shown here.</p>{% endif %}
+</div>

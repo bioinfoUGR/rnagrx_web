@@ -4,11 +4,15 @@ from __future__ import annotations
 import bz2
 import gzip
 import io
+import os
 import re
+import tarfile
+import zipfile
 from pathlib import Path
 
 SUFFIXES = (".fastq", ".fq", ".fasta", ".fa", ".fna", ".txt", ".tsv", ".csv")
 COMPRESSED = (".gz", ".bz2")
+ARCHIVES = (".zip", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tbz", ".tar.xz", ".txz")
 SAMPLE_RECORDS = 50
 SEQ_RE = re.compile(r"^[ACGTUN.]+$", re.IGNORECASE)
 COUNT_RE = re.compile(r"^[ACGTUN]+[\t,;]\s*\d+(\.\d+)?$", re.IGNORECASE)
@@ -24,6 +28,36 @@ def allowed_name(name: str) -> bool:
         if low.endswith(c):
             low = low[: -len(c)]
     return low.endswith(SUFFIXES)
+
+
+def archive_name(name: str) -> bool:
+    return name.lower().endswith(ARCHIVES)
+
+
+def is_archive(path: Path) -> bool:
+    """ZIP or tar (plain or gzip/bzip2/xz compressed), judged by the content."""
+    try:
+        return zipfile.is_zipfile(path) or tarfile.is_tarfile(path)
+    except (OSError, EOFError):
+        return False
+
+
+def safe_name(name: str) -> str:
+    """A file name without folders and with only harmless characters, for storing on disk."""
+    base = os.path.basename(name.replace("\\", "/"))
+    base = re.sub(r"[^A-Za-z0-9._-]", "_", base).lstrip(".")[-120:]
+    return base or "reads"
+
+
+def strip_suffixes(name: str) -> str:
+    """'S1_R1.fastq.gz' -> 'S1_R1'"""
+    low = name.lower()
+    for group in (COMPRESSED, SUFFIXES):
+        for c in group:
+            if low.endswith(c):
+                name, low = name[: -len(c)], low[: -len(c)]
+                break
+    return name
 
 
 def compression(path: Path) -> str:

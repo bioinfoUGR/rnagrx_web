@@ -1,0 +1,41 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% load humanize %}
+{% block page_title %}My data{% endblock %}
+{% block srnatoolbox_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">My data</p>
+    <h1 class="h3">Datasets</h1>
+    <p class="text-secondary mb-0 prose">Upload or link your read files once; then run sRNAbench on all or some of
+      the samples, as often as you like with different settings, without uploading again.</p>
+  </div>
+  <form method="post" action="{% url 'srnatoolbox:data_new' %}" class="d-flex flex-wrap gap-2 align-items-end">
+    {% csrf_token %}
+    <div>
+      <label class="form-label small fw-semibold mb-1" for="new-title">Name <span class="fw-normal text-secondary">(optional)</span></label>
+      <input id="new-title" name="title" class="form-control" maxlength="200" placeholder="e.g. Serum exosomes, CRC cohort">
+    </div>
+    <button class="btn btn-primary" type="submit">New dataset</button>
+  </form>
+</section>
+
+{% if datasets %}
+<div class="table-responsive">
+<table class="table table-sm results-table align-middle">
+  <thead><tr><th>Dataset</th><th class="num">Samples</th><th class="num">Size</th><th>Created</th><th>Kept until</th></tr></thead>
+  <tbody>{% for d in datasets %}
+    <tr><td><a href="{{ d.ds.get_absolute_url }}">{{ d.ds.title }}</a> <code class="small">{{ d.ds.slug }}</code></td>
+      <td class="num">{{ d.n_samples|intcomma }}</td><td class="num">{{ d.size|filesizeformat }}</td>
+      <td>{{ d.ds.created_at|date:"j M Y H:i" }}</td><td>{{ d.ds.expires_at|date:"j M Y" }}</td></tr>
+  {% endfor %}</tbody>
+</table>
+</div>
+<p class="small text-secondary">This list is stored in your browser session. Anyone with a dataset's link can use
+  it; bookmark the link to keep it.</p>
+{% else %}
+<div class="no-results"><h2 class="h5">No datasets in this browser session yet.</h2>
+  <p class="mb-0">Start a new dataset, then add FASTQ, FASTA or read count files, or archives of them.</p></div>
+{% endif %}
+<p class="small text-secondary">Limits: {{ file_gb }} GB per read file, {{ max_gb }} GB per dataset. A dataset is
+  deleted {{ max_age_days }} days after it was last used (files added or a job started).</p>
+{% endblock %}

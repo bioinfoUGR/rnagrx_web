@@ -3,6 +3,7 @@ from django.http import Http404
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_http_methods
 
+from jobs.models import Dataset
 from jobs.views import recent_jobs
 
 from .tools import PLANNED, TOOLS
@@ -49,5 +50,10 @@ def tool_view(request, key):
     tool = TOOLS.get(key)
     if tool is None:
         raise Http404
-    # the forms come with the tools themselves (phase 4/5); until then the page says "coming soon"
-    return render(request, "srnatoolbox/tool.html", {"tool": tool, **_links()})
+    # the forms come with the tools themselves (phase 5/6); until then the page says "coming soon"
+    selection = None
+    ds = Dataset.objects.filter(slug=request.GET.get("dataset", ""), deleted_at__isnull=True).first()
+    if ds is not None:
+        ids = [int(x) for x in request.GET.getlist("s") if x.isdigit()]
+        selection = {"ds": ds, "n": ds.samples.filter(pk__in=ids).count()}
+    return render(request, "srnatoolbox/tool.html", {"tool": tool, "selection": selection, **_links()})

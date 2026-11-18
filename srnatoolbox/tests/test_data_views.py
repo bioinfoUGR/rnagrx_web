@@ -119,4 +119,5 @@ class DatasetPageTests(TestCase):
         self.add("a.fastq")
         s = Sample.objects.get()
         r = self.client.get(reverse("srnatoolbox:tool", args=["srnabench"]), {"dataset": self.ds.slug, "s": [s.pk]})
-        self.assertContains(r, "Selected: 1 sample of dataset")
+        self.assertContains(r, "1 sample</strong> of dataset")
+        self.assertContains(r, "Start sRNAbench")

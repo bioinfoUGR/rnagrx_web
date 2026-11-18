@@ -1,0 +1,10 @@
+{% for s in hits %}
+<li role="option" class="species-hit" tabindex="-1" data-key="{{ s.key }}" data-label="{{ s.label }}" data-genome="{% if s.has_genome %}1{% endif %}"
+    data-dbs="{{ s.dbs|join:',' }}" data-detail="{% if s.has_genome %}genome {{ s.accession }}{% else %}taxon {{ s.taxon }}, microRNAs only{% endif %}">
+  <span><strong>{{ s.name }}</strong>{% if s.common %} · {{ s.common }}{% endif %} <span class="text-secondary">· taxon {{ s.taxon }}</span></span>
+  <span class="text-nowrap">{% if s.has_genome %}<span class="badge text-bg-success">genome</span>{% endif %}
+    {% for db in s.dbs %}<span class="badge text-bg-light border">{% for k, v in mirna_labels.items %}{% if k == db %}{{ v }}{% endif %}{% endfor %}</span> {% endfor %}</span>
+</li>
+{% empty %}
+<li class="species-none text-secondary">No species found. Try the scientific name, a common name or the NCBI taxon ID.</li>
+{% endfor %}

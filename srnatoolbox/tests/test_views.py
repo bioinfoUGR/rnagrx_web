@@ -18,7 +18,8 @@ class PageTests(TestCase):
         self.assertContains(r, "https://doi.org/10.1093/nar/gkac363")
 
     def test_tool_pages(self):
-        self.assertContains(self.client.get(reverse("srnatoolbox:tool", args=["srnabench"])), "coming soon")
+        self.assertContains(self.client.get(reverse("srnatoolbox:tool", args=["srnabench"])), "starts from a dataset")
+        self.assertContains(self.client.get(reverse("srnatoolbox:tool", args=["srnade"])), "coming soon")
         self.assertEqual(self.client.get(reverse("srnatoolbox:tool", args=["nope"])).status_code, 404)
 
     def test_landing_links_both_services(self):

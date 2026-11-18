@@ -1,11 +1,13 @@
 """The sRNAtoolbox tools. A tool without form_class is listed as "coming soon"."""
 from jobs.registry import Tool, register, tools_of
 
+from .forms import SrnabenchForm
+
 register(
     Tool(app="srnatoolbox", key="srnabench", label="sRNAbench", title="sRNAbench: small RNA profiling",
-         description="Expression profiling of microRNAs and other small RNAs, and prediction of novel microRNAs, "
+         description="Expression profiling of microRNAs, tRNAs and other small RNAs "
                      "from small RNA sequencing data (FASTQ, FASTA or read/count files).",
-         runner="srnatoolbox.runners.run_srnabench", queue="rnagrx_heavy"),
+         runner="srnatoolbox.runners.run_srnabench", queue="rnagrx_heavy", form_class=SrnabenchForm),
     Tool(app="srnatoolbox", key="srnade", label="sRNAde", title="sRNAde: differential expression",
          description="Differential expression of microRNAs and other small RNAs between groups of samples, "
                      "from a finished sRNAbench job.",

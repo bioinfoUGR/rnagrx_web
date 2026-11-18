@@ -1,0 +1,98 @@
+{% load humanize %}
+<div class="kv-tiles mt-3">
+  <div><strong>{{ summary.totals.raw|intword }}</strong><span>raw reads, all samples</span></div>
+  <div><strong>{{ summary.totals.reads|intword }}</strong><span>reads in analysis ({{ summary.totals.reads_pct }} %)</span></div>
+  <div><strong>{{ summary.totals.mirna_pct }} %</strong><span>of reads in analysis are microRNAs (mean)</span></div>
+  <div><strong>{{ summary.totals.mirnas|intcomma }}</strong><span>microRNAs detected in any sample</span></div>
+</div>
+
+<ul class="nav nav-tabs mt-4" role="tablist">
+  <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-overview" type="button" role="tab">Overview</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-mirna" type="button" role="tab">microRNAs</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-files" type="button" role="tab">Files</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-log" type="button" role="tab">Log</button></li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
+    <section class="card mt-3"><div class="card-body">
+      <div class="d-flex flex-wrap gap-2 justify-content-between align-items-end">
+        <div><h2 class="h5 mb-1">Samples</h2>
+          <p class="small text-secondary mb-0">Click a sample for its full report; click a column title to sort.
+            {% if summary.samples|length > 2 %}Samples far below the others are highlighted.{% endif %}</p></div>
+        <input class="form-control form-control-sm table-filter" type="search" placeholder="Filter samples" aria-label="Filter samples" data-table="sample-results">
+      </div>
+      <div class="table-responsive mt-2">
+      <table class="table table-sm results-table sortable" id="sample-results">
+        <thead><tr><th data-sort="text">Sample</th>{% if summary.group_column %}<th data-sort="text">{{ summary.group_column }}</th>{% endif %}
+          <th class="num" data-sort="num">Raw reads</th><th class="num" data-sort="num">Adapter dimers</th><th class="num" data-sort="num">Too short</th>
+          <th class="num" data-sort="num">In analysis</th><th class="num" data-sort="num">Unique</th><th class="num" data-sort="num">microRNA</th>
+          <th class="num" data-sort="num">microRNAs detected</th><th>Note</th></tr></thead>
+        <tbody>
+          {% for s in summary.samples %}
+          <tr{% if s.flags %} class="row-flag"{% endif %}>
+            <td data-value="{{ s.name }}"><a href="{% url 'srnatoolbox:job_sample' job.slug s.name %}">{{ s.name }}</a></td>
+            {% if summary.group_column %}<td>{{ s.group }}</td>{% endif %}
+            <td class="num" data-value="{{ s.raw }}">{{ s.raw|floatformat:"0g" }}</td>
+            <td class="num" data-value="{{ s.adapter_dimers }}">{{ s.adapter_dimers|floatformat:"0g" }}</td>
+            <td class="num" data-value="{{ s.too_short }}">{{ s.too_short|floatformat:"0g" }}</td>
+            <td class="num" data-value="{{ s.reads }}">{{ s.reads|floatformat:"0g" }}</td>
+            <td class="num" data-value="{{ s.unique }}">{{ s.unique|floatformat:"0g" }}</td>
+            <td class="num" data-value="{{ s.mirna_pct }}">{{ s.mirna_pct|floatformat:1 }} %</td>
+            <td class="num" data-value="{{ s.mirnas }}">{{ s.mirnas|intcomma }}</td>
+            <td class="small">{{ s.flags|join:", " }}</td>
+          </tr>
+          {% endfor %}
+          {% for f in summary.failed %}
+          <tr class="row-failed"><td data-value="{{ f.name }}">{{ f.name }}</td>{% if summary.group_column %}<td></td>{% endif %}
+            <td colspan="8" class="small"><span class="text-danger fw-semibold">no results</span> · {{ f.reason }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div></section>
+
+    <div class="row g-3 mt-0">
+      <div class="col-lg-6"><section class="card h-100"><div class="card-body">
+        <h2 class="h5 mb-1">RNA classes</h2><p class="small text-secondary">Percent of reads in analysis, both strands.</p>
+        <div id="chart-classes" class="chart" role="img" aria-label="RNA classes per sample, stacked bars"></div>
+      </div></section></div>
+      <div class="col-lg-6"><section class="card h-100"><div class="card-body">
+        <h2 class="h5 mb-1">Read length</h2><p class="small text-secondary">Percent of reads in analysis per length (nt); hover for the sample.</p>
+        <div id="chart-lengths" class="chart" role="img" aria-label="Read length distribution per sample"></div>
+      </div></section></div>
+    </div>
+
+    {% include "srnatoolbox/_top_mirnas.html" %}
+  </div>
+
+  <div class="tab-pane fade" id="tab-mirna" role="tabpanel">
+    {% include "srnatoolbox/_top_mirnas.html" %}
+    <section class="card mt-3"><div class="card-body">
+      <h2 class="h5">All microRNAs of all samples</h2>
+      <ul class="list-unstyled mb-0">{% for r in job.results %}{% if r.name|slice:":6" == "mirna_" %}
+        <li class="d-flex justify-content-between gap-2 py-1 border-bottom"><span>{{ r.label }}</span>
+          <a class="btn btn-sm btn-outline-primary text-nowrap" href="{% url file_view job.slug r.name %}">{{ r.name }} ({{ r.size|filesizeformat }})</a></li>
+      {% endif %}{% endfor %}</ul>
+    </div></section>
+  </div>
+
+  <div class="tab-pane fade" id="tab-files" role="tabpanel">
+    <section class="card mt-3"><div class="card-body">
+      <h2 class="h5">Result files</h2>
+      <ul class="list-unstyled mb-0">{% for r in job.results %}
+        <li class="d-flex flex-wrap justify-content-between gap-2 py-2 border-bottom"><span>{{ r.label }}<br><code class="small">{{ r.name }}</code></span>
+          <a class="btn btn-sm btn-primary text-nowrap align-self-center" href="{% url file_view job.slug r.name %}">Download ({{ r.size|filesizeformat }})</a></li>
+      {% endfor %}</ul>
+      <h2 class="h6 mt-4">Full sRNAbench output per sample</h2>
+      <p class="small text-secondary">As written by the sRNAbench command-line tool (expression tables of all RNA classes,
+        isomiRs, tRNA fragments, statistics). Each download is a ZIP archive made when you click.</p>
+      <div class="d-flex flex-wrap gap-2">{% for s in summary.samples %}
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'srnatoolbox:job_sample_zip' job.slug s.name %}">{{ s.name }}.zip</a>{% endfor %}</div>
+    </div></section>
+  </div>
+
+  <div class="tab-pane fade" id="tab-log" role="tabpanel">
+    <pre class="job-log mt-3">{{ log }}</pre>
+  </div>
+</div>
+{{ summary|json_script:"summary-data" }}

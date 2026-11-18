@@ -1,0 +1,17 @@
+{% load humanize %}
+{% if summary.top.rows %}
+<section class="card mt-3"><div class="card-body">
+  <h2 class="h5 mb-1">Most abundant microRNAs</h2>
+  <p class="small text-secondary">RPM (reads per million reads in analysis), adjusted for multi-mapping reads; mean over the samples{% if summary.top.groups %} and per {{ summary.group_column }}{% endif %}.</p>
+  <div class="table-responsive">
+  <table class="table table-sm results-table sortable mb-0">
+    <thead><tr><th data-sort="text">microRNA</th>{% for g in summary.top.groups %}<th class="num" data-sort="num">Mean {{ g }}</th>{% endfor %}
+      <th class="num" data-sort="num">Mean all</th><th class="num" data-sort="num">Detected in</th></tr></thead>
+    <tbody>{% for r in summary.top.rows %}
+      <tr><td data-value="{{ r.name }}">{{ r.name }}</td>{% for v in r.groups %}<td class="num" data-value="{{ v|default_if_none:0 }}">{{ v|floatformat:"0g"|default:"—" }}</td>{% endfor %}
+        <td class="num" data-value="{{ r.mean }}">{{ r.mean|floatformat:"0g" }}</td><td class="num" data-value="{{ r.detected }}">{{ r.detected }} of {{ summary.samples|length }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  </div>
+</div></section>
+{% endif %}

@@ -28,3 +28,29 @@
 .action-bar { position: sticky; bottom: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
   justify-content: space-between; margin-top: 1rem; background: #fff; border: 1px solid #dde2e7; border-radius: .5rem;
   padding: .8rem 1.2rem; box-shadow: 0 -2px 8px rgba(0, 0, 0, .05); }
+
+/* sRNAbench settings */
+.species-box { position: relative; }
+.species-hits { position: absolute; z-index: 20; left: 0; right: 0; margin: .25rem 0 0; max-height: 22rem; overflow-y: auto;
+  background: #fff; border: 1px solid #c8d3dd; border-radius: .375rem; box-shadow: 0 6px 18px rgba(0, 0, 0, .08); font-size: .875rem; }
+.species-hit { display: flex; justify-content: space-between; gap: .75rem; padding: .45rem .75rem; cursor: pointer; }
+.species-hit:hover, .species-hit.active { background: #e7f0f7; }
+.species-none { padding: .5rem .75rem; }
+
+/* sRNAbench results */
+.kv-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+.kv-tiles > div { background: #fff; border: 1px solid #dde2e7; border-radius: .5rem; padding: .75rem 1rem; }
+.kv-tiles strong { display: block; font-size: 1.4rem; color: #1f5f8b; }
+.kv-tiles span { font-size: .8rem; color: #5c6670; }
+@media (max-width: 760px) { .kv-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.job-line { font-size: .95rem; }
+.job-line details summary { cursor: pointer; }
+.row-flag > td { background: #fff8e6; }
+.row-failed > td { background: #fdf2f2; }
+.table-filter { max-width: 16rem; }
+table.sortable th[data-sort] { cursor: pointer; user-select: none; }
+table.sortable th[data-dir="asc"]::after { content: " ▲"; font-size: .7em; }
+table.sortable th[data-dir="desc"]::after { content: " ▼"; font-size: .7em; }
+.chart { width: 100%; min-height: 160px; }
+.chart-short { min-height: 140px; }
+.file-list { max-height: 32rem; overflow-y: auto; }

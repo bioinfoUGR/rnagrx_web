@@ -193,6 +193,11 @@ MISRA_LIMIT_SRNABENCH = env.int("MISRA_LIMIT_SRNABENCH", default=500)
 MISRA_SRNABENCH_META_THREADS = env.int("MISRA_SRNABENCH_META_THREADS", default=4)  # experiments in parallel
 MISRA_SRNABENCH_THREADS = env.int("MISRA_SRNABENCH_THREADS", default=2)  # threads per experiment
 MISRA_SRNABENCH_TIMEOUT_HOURS = env.int("MISRA_SRNABENCH_TIMEOUT_HOURS", default=24)
+# sRNAtoolbox sRNAbench jobs (queue rnagrx_heavy): samples in parallel x threads per sample = cores per job
+SRNABENCH_MAX_SAMPLES = env.int("SRNABENCH_MAX_SAMPLES", default=200)
+SRNATOOLBOX_META_THREADS = env.int("SRNATOOLBOX_META_THREADS", default=4)
+SRNATOOLBOX_THREADS = env.int("SRNATOOLBOX_THREADS", default=2)
+SRNATOOLBOX_TIMEOUT_HOURS = env.int("SRNATOOLBOX_TIMEOUT_HOURS", default=48)
 # API: experiments per request for matrices / per-experiment details, requests per minute and IP (0 = no limit)
 MISRA_API_MATRIX_LIMIT = env.int("MISRA_API_MATRIX_LIMIT", default=2_000)
 MISRA_API_DETAIL_LIMIT = env.int("MISRA_API_DETAIL_LIMIT", default=1_000)

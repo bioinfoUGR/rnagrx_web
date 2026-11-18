@@ -1,0 +1,23 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% load static %}
+{% block page_title %}sRNAbench job {{ job.slug }}{% endblock %}
+{% block srnatoolbox_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">{% if dataset and not dataset.deleted_at %}<a href="{{ dataset.get_absolute_url }}">{{ dataset.title }}</a>{% else %}{{ job.inputs.dataset_title }}{% endif %} · sRNAbench job</p>
+    <h1 class="h3">{{ tool.title }}</h1>
+    <p class="small text-secondary mb-0">Job <code>{{ job.slug }}</code> · started {{ job.created_at|date:"j F Y, H:i" }}{% if job.finished_at and job.started_at %} · finished after {{ job.started_at|timesince:job.finished_at }}{% endif %}
+      · bookmark this page; results are kept for {{ max_age_days }} days.</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if rerun_url %}<a class="btn btn-outline-primary" href="{{ rerun_url }}">Run again with other settings</a>{% endif %}
+    <span class="d-inline-block" tabindex="0" title="sRNAde comes in the next step of the new site">
+      <button class="btn btn-primary" type="button" disabled>Differential expression with sRNAde →</button></span>
+  </div>
+</section>
+<div id="job-status">{% include "srnatoolbox/_srnabench_status.html" %}</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'vendor/plotly/plotly.min.js' %}"></script>
+<script src="{% static 'srnatoolbox/results.js' %}"></script>
+{% endblock %}

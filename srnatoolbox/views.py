@@ -50,6 +50,9 @@ def tool_view(request, key):
     tool = TOOLS.get(key)
     if tool is None:
         raise Http404
+    if key == "srnabench":
+        from .views_bench import srnabench_view
+        return srnabench_view(request)
     # the forms come with the tools themselves (phase 5/6); until then the page says "coming soon"
     selection = None
     ds = Dataset.objects.filter(slug=request.GET.get("dataset", ""), deleted_at__isnull=True).first()

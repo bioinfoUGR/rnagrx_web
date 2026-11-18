@@ -2,15 +2,19 @@ from django.urls import path
 
 from jobs import views as job_views
 
-from . import views, views_data
+from . import views, views_bench, views_data
 
 app_name = "srnatoolbox"
 urlpatterns = [
     path("", views.home, name="home"),
     path("about/", views.about, name="about"),
     path("tools/<slug:key>/", views.tool_view, name="tool"),
-    path("job/<str:slug>/", job_views.job_view, {"app": "srnatoolbox"}, name="job"),
+    path("species/search/", views_bench.species_search, name="species_search"),
+    path("job/<str:slug>/", views_bench.job_view, name="job"),
     path("job/<str:slug>/file/<str:name>", job_views.job_file, {"app": "srnatoolbox"}, name="job_file"),
+    path("job/<str:slug>/sample/<str:name>/", views_bench.sample_view, name="job_sample"),
+    path("job/<str:slug>/sample/<str:name>/zip/", views_bench.sample_zip, name="job_sample_zip"),
+    path("job/<str:slug>/sample/<str:name>/file/<path:path>", views_bench.sample_file, name="job_sample_file"),
     # datasets
     path("data/", views_data.data_home, name="data"),
     path("data/new/", views_data.data_new, name="data_new"),

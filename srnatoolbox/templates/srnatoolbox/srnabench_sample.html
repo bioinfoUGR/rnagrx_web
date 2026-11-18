@@ -1,0 +1,112 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% load humanize static %}
+{% block page_title %}{{ name }} · sRNAbench{% endblock %}
+{% block srnatoolbox_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow"><a href="{{ job.get_absolute_url }}">sRNAbench job {{ job.slug }}</a> · sample</p>
+    <h1 class="h3 mb-1">{{ name }}</h1>
+    <p class="small text-secondary mb-0">{% for c, v in sample.annotations.items %}{{ c }}: {{ v }} · {% endfor %}protocol: {{ report.stats.protocol|default:"—" }}</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if prev %}<a class="btn btn-outline-primary" href="{% url 'srnatoolbox:job_sample' job.slug prev %}">← {{ prev }}</a>{% endif %}
+    {% if next %}<a class="btn btn-outline-primary" href="{% url 'srnatoolbox:job_sample' job.slug next %}">{{ next }} →</a>{% endif %}
+    <a class="btn btn-primary" href="{% url 'srnatoolbox:job_sample_zip' job.slug name %}">Download sample (ZIP)</a>
+  </div>
+</section>
+
+<div class="kv-tiles">
+  <div><strong>{{ report.stats.raw|intword }}</strong><span>raw reads</span></div>
+  <div><strong>{{ report.stats.reads|intword }}</strong><span>reads in analysis · {{ report.stats.unique|intcomma }} unique</span></div>
+  <div><strong>{{ report.stats.mirna_pct }} %</strong><span>of reads in analysis are microRNAs</span></div>
+  <div><strong>{{ report.stats.mirnas|intcomma }}</strong><span>microRNAs detected</span></div>
+</div>
+
+<ul class="nav nav-tabs mt-4" role="tablist">
+  <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-overview" type="button" role="tab">Overview</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-mirna" type="button" role="tab">microRNAs</button></li>
+  {% if report.trnas %}<li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-trna" type="button" role="tab">tRNAs</button></li>{% endif %}
+  {% if report.libs %}<li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-libs" type="button" role="tab">Other RNA classes</button></li>{% endif %}
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-files" type="button" role="tab">Files</button></li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
+    <div class="row g-3 mt-0">
+      <div class="col-lg-6"><section class="card h-100"><div class="card-body">
+        <h2 class="h5 mb-1">Preprocessing</h2><p class="small text-secondary">Reads at the start and removed by each step.</p>
+        <table class="table table-sm results-table mb-0">
+          {% for label, n in report.stats.preproc %}<tr{% if forloop.last %} class="fw-semibold"{% endif %}><td>{{ label }}</td><td class="num">{{ n|floatformat:"0g" }}</td></tr>{% endfor %}
+        </table>
+      </div></section></div>
+      <div class="col-lg-6"><section class="card h-100"><div class="card-body">
+        <h2 class="h5 mb-1">RNA classes</h2><p class="small text-secondary">Percent of reads in analysis, both strands.</p>
+        <div id="chart-classes" class="chart chart-short" role="img" aria-label="RNA classes of this sample"></div>
+        <table class="table table-sm results-table mb-0 mt-2">
+          {% for c, v in report.stats.classes.items %}<tr><td>{{ c }}</td><td class="num">{{ v|floatformat:2 }} %</td></tr>{% endfor %}
+        </table>
+      </div></section></div>
+    </div>
+    <section class="card mt-3"><div class="card-body">
+      <h2 class="h5 mb-1">Read length</h2><p class="small text-secondary">Percent of reads in analysis per length (nt).</p>
+      <div id="chart-lengths" class="chart" role="img" aria-label="Read length distribution of this sample"></div>
+    </div></section>
+  </div>
+
+  <div class="tab-pane fade" id="tab-mirna" role="tabpanel">
+    <section class="card mt-3"><div class="card-body">
+      <h2 class="h5 mb-1">Most abundant microRNAs</h2>
+      <p class="small text-secondary">The {{ report.mirnas|length }} most abundant; all microRNAs are in the sample ZIP and in the job's matrices.
+        Adjusted counts share multi-mapping reads; RPM per million reads in analysis.</p>
+      <div class="table-responsive"><table class="table table-sm results-table sortable mb-0">
+        <thead><tr><th data-sort="text">microRNA</th><th class="num" data-sort="num">Unique reads</th><th class="num" data-sort="num">Read count</th>
+          <th class="num" data-sort="num">Adjusted</th><th class="num" data-sort="num">RPM</th><th data-sort="text">Precursor</th></tr></thead>
+        <tbody>{% for m in report.mirnas %}<tr><td data-value="{{ m.name }}">{{ m.name }}</td><td class="num" data-value="{{ m.ur }}">{{ m.ur|floatformat:"0g" }}</td>
+          <td class="num" data-value="{{ m.rc }}">{{ m.rc|floatformat:"0g" }}</td><td class="num" data-value="{{ m.rcadj }}">{{ m.rcadj|floatformat:"1g" }}</td>
+          <td class="num" data-value="{{ m.rpm }}">{{ m.rpm|floatformat:"0g" }}</td><td data-value="{{ m.precursor }}"><code class="small">{{ m.precursor }}</code></td></tr>
+        {% empty %}<tr><td colspan="6" class="text-secondary">No microRNA reads.</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </div></section>
+  </div>
+
+  {% if report.trnas %}
+  <div class="tab-pane fade" id="tab-trna" role="tabpanel">
+    <section class="card mt-3"><div class="card-body">
+      <h2 class="h5 mb-1">Most abundant tRNAs</h2>
+      <p class="small text-secondary">Sense reads, adjusted for multi-mapping. Fragment types and maturation are in the sample ZIP (trna_results).</p>
+      <table class="table table-sm results-table sortable mb-0">
+        <thead><tr><th data-sort="text">tRNA</th><th class="num" data-sort="num">Adjusted reads</th><th class="num" data-sort="num">RPM</th></tr></thead>
+        <tbody>{% for t in report.trnas %}<tr><td data-value="{{ t.name }}">{{ t.name }}</td><td class="num" data-value="{{ t.rcadj }}">{{ t.rcadj|floatformat:"1g" }}</td><td class="num" data-value="{{ t.rpm }}">{{ t.rpm|floatformat:"0g" }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div></section>
+  </div>
+  {% endif %}
+
+  {% if report.libs %}
+  <div class="tab-pane fade" id="tab-libs" role="tabpanel">
+    <section class="card mt-3"><div class="card-body">
+      <h2 class="h5 mb-1">Other RNA classes</h2>
+      <p class="small text-secondary">Reads assigned to each reference library of the genome (adjusted for multi-mapping) and the number of sequences detected.</p>
+      <table class="table table-sm results-table mb-0">
+        <thead><tr><th>Library</th><th class="num">Reads</th><th class="num">Sequences detected</th></tr></thead>
+        <tbody>{% for l in report.libs %}<tr><td>{{ l.name }}</td><td class="num">{{ l.reads|floatformat:"0g" }}</td><td class="num">{{ l.sequences|intcomma }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div></section>
+  </div>
+  {% endif %}
+
+  <div class="tab-pane fade" id="tab-files" role="tabpanel">
+    <section class="card mt-3"><div class="card-body">
+      <h2 class="h5 mb-1">Files of this sample</h2>
+      <p class="small text-secondary">The sRNAbench output as written by the command-line tool.</p>
+      <ul class="list-unstyled small mb-0 file-list">{% for path, size in report.files %}
+        <li class="d-flex justify-content-between gap-2 border-bottom py-1"><a href="{% url 'srnatoolbox:job_sample_file' job.slug name path %}"><code>{{ path }}</code></a><span class="text-secondary text-nowrap">{{ size|filesizeformat }}</span></li>
+      {% endfor %}</ul>
+    </div></section>
+  </div>
+</div>
+{{ report.stats|json_script:"sample-data" }}
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'vendor/plotly/plotly.min.js' %}"></script>
+<script src="{% static 'srnatoolbox/results.js' %}"></script>
+{% endblock %}

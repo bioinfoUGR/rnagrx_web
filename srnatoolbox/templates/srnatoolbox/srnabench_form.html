@@ -1,0 +1,132 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% load humanize static %}
+{% block page_title %}{{ tool.label }}{% endblock %}
+{% block srnatoolbox_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow"><a href="{{ ds.get_absolute_url }}">{{ ds.title }}</a> · new sRNAbench job</p>
+    <h1 class="h3">{{ tool.title }}</h1>
+    <p class="text-secondary mb-0 prose">Expression profiling of microRNAs, tRNAs and other small RNAs. Each sample is profiled separately; you get an overview of all samples and a report per sample.</p>
+  </div>
+</section>
+
+<form method="post" enctype="multipart/form-data" class="srnabench-form" id="srnabench-form" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="dataset" value="{{ ds.slug }}">
+  {% for s in samples %}<input type="hidden" name="s" value="{{ s.pk }}">{% endfor %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+  <section class="card"><div class="card-body">
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+      <div>
+        <h2 class="h5 mb-1">1. Samples</h2>
+        <p class="mb-0"><strong>{{ samples|length|intcomma }} sample{{ samples|length|pluralize }}</strong> of dataset
+          <a href="{{ ds.get_absolute_url }}">{{ ds.title }}</a> · {{ size|filesizeformat }}{% if groups %} ·
+          {{ group_column }}: {% for g, n in groups %}{{ g|default:"(empty)" }} {{ n }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</p>
+      </div>
+      <a class="btn btn-outline-primary" href="{{ ds.get_absolute_url }}">Change selection</a>
+    </div>
+    {% if problems %}<div class="alert alert-danger mt-3 mb-0"><ul class="mb-0">{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul></div>{% endif %}
+    {% if previous %}
+    <div class="mt-3" style="max-width: 32rem">
+      <label class="form-label small fw-semibold mb-1" for="copy-from">Start from the settings of an earlier job <span class="fw-normal text-secondary">(optional)</span></label>
+      <select id="copy-from" class="form-select" data-base="?dataset={{ ds.slug }}{% for s in samples %}&amp;s={{ s.pk }}{% endfor %}">
+        <option value="">Default settings</option>
+        {% for j in previous %}<option value="{{ j.slug }}" {% if j.slug == copied %}selected{% endif %}>{{ j.slug }} · {{ j.params.species_name }} · {{ j.params.mirdb }} · {{ j.created_at|date:"j M H:i" }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+  </div></section>
+
+  <section class="card mt-3"><div class="card-body">
+    <h2 class="h5">2. Species and reference sequences</h2>
+    <div class="row g-3">
+      <div class="col-lg-9">
+        <label class="form-label fw-semibold" for="species-search">Species</label>
+        <div class="species-box">
+          <input id="species-search" class="form-control{% if form.species.errors %} is-invalid{% endif %}" type="search" autocomplete="off"
+                 role="combobox" aria-expanded="false" aria-controls="species-hits" aria-autocomplete="list"
+                 placeholder="Name, common name or taxon ID, e.g. human, Arabidopsis, 10116"
+                 value="{% if species %}{{ species.label }}{% endif %}"
+                 hx-get="{% url 'srnatoolbox:species_search' %}" hx-trigger="input changed delay:200ms, focus" hx-target="#species-hits"
+                 name="q" hx-params="q">
+          <ul id="species-hits" class="species-hits list-unstyled" role="listbox" hidden></ul>
+        </div>
+        {{ form.species }}
+        <div id="species-chosen" class="small mt-1 {% if not species %}text-secondary{% endif %}" data-dbs="{{ species.dbs|join:',' }}" data-genome="{% if species.has_genome %}1{% endif %}" data-set="{% if species %}1{% endif %}">
+          {% if species %}{{ species.label }} · {% if species.has_genome %}genome {{ species.accession }}{% else %}taxon {{ species.taxon }}, microRNAs only{% endif %}{% else %}No species chosen yet.{% endif %}
+        </div>
+        {% for e in form.species.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        <p class="form-text">{{ n_genome }} species with genome (all small RNA classes are profiled) and {{ n_mirna_only|intcomma }}
+          more with microRNAs only, from the four microRNA databases. Prediction of novel microRNAs will be added when the
+          sRNAbench command-line tool supports it.</p>
+      </div>
+    </div>
+
+    <fieldset class="mt-2">
+      <legend class="form-label fw-semibold fs-6">microRNA reference</legend>
+      <div class="mirdb-choices">
+        {% for radio in form.mirdb %}
+        <div class="form-check form-check-inline me-4">
+          <input class="form-check-input" type="radio" name="{{ radio.data.name }}" id="{{ radio.id_for_label }}" value="{{ radio.data.value }}" {% if radio.data.selected %}checked{% endif %}>
+          <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}<span class="mirdb-note small text-secondary"></span></label>
+        </div>
+        {% endfor %}
+      </div>
+      {% for e in form.mirdb.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </fieldset>
+    <div class="row g-3 mt-1" id="own-mirna" {% if form.mirdb.value != "own" %}hidden{% endif %}>
+      {% include "srnatoolbox/_field.html" with f=form.mature col="col-md-6" %}
+      {% include "srnatoolbox/_field.html" with f=form.hairpin col="col-md-6" %}
+    </div>
+    <div class="row g-3 mt-1">
+      {% include "srnatoolbox/_field.html" with f=form.libs col="col-md-6" optional=True %}
+      {% include "srnatoolbox/_field.html" with f=form.spikes col="col-md-6" optional=True %}
+    </div>
+  </div></section>
+
+  <section class="card mt-3"><div class="card-body">
+    <h2 class="h5">3. Preprocessing and mapping</h2>
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <label class="form-label small fw-semibold" for="{{ form.protocol.id_for_label }}">{{ form.protocol.label }}</label>{{ form.protocol }}
+        <div class="form-text">Sets the 3' adapter and the random nucleotides or UMIs to remove.</div>
+        {% for e in form.protocol.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+      </div>
+      {% include "srnatoolbox/_field.html" with f=form.min_len col="col-6 col-lg-2" %}
+      {% include "srnatoolbox/_field.html" with f=form.max_len col="col-6 col-lg-2" optional=True %}
+      {% include "srnatoolbox/_field.html" with f=form.min_rc col="col-6 col-lg-2" %}
+    </div>
+    <div class="row g-3 mt-1" id="custom-adapter" {% if form.protocol.value != "custom" %}hidden{% endif %}>
+      {% include "srnatoolbox/_field.html" with f=form.adapter col="col-md-4" %}
+      {% include "srnatoolbox/_field.html" with f=form.random_5p col="col-md-4" %}
+      {% include "srnatoolbox/_field.html" with f=form.random_3p col="col-md-4" %}
+    </div>
+    <div class="row g-3 mt-1">
+      <div class="col-6 col-lg-2"><label class="form-label small fw-semibold" for="{{ form.mm.id_for_label }}">{{ form.mm.label }}</label>{{ form.mm }}</div>
+    </div>
+    <details class="mt-3">
+      <summary class="fw-semibold text-primary">Advanced options</summary>
+      <div class="row g-3 mt-1">
+        {% include "srnatoolbox/_field.html" with f=form.adapter_mm col="col-6 col-lg-3" %}
+        {% include "srnatoolbox/_field.html" with f=form.min_adapter_length col="col-6 col-lg-3" %}
+        <div class="col-lg-6">
+          {% include "srnatoolbox/_field.html" with f=form.low_complexity col="" %}
+          {% include "srnatoolbox/_field.html" with f=form.seed_expression col="" %}
+        </div>
+      </div>
+      <p class="form-text">Other options keep the defaults of the sRNAbench command-line tool.</p>
+    </details>
+  </div></section>
+
+  <div class="action-bar">
+    <div>
+      <div class="fw-semibold">{{ samples|length }} sample{{ samples|length|pluralize }} · <span id="summary-species">{% if species %}{{ species.name }}{% else %}no species yet{% endif %}</span></div>
+      <div class="small text-secondary">You get a private link to the job; results are kept for {{ max_age_days }} days. The
+        read files stay in the dataset for further jobs.</div>
+    </div>
+    <button class="btn btn-primary" type="submit" {% if problems %}disabled{% endif %}>Start sRNAbench</button>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script src="{% static 'srnatoolbox/srnabench.js' %}"></script>{% endblock %}

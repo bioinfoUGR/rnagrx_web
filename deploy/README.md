@@ -31,6 +31,8 @@ Layout on each server (dev and prod are the same, except `.env`):
 | MISRA_STORAGE, SCRATCH_DIR, SRNATOOLBOX_DB, SRNATOOLBOX_ENV, ENTREZ_EMAIL | | paths for the services |
 | JOB_DIR, JOB_MAX_AGE_DAYS | /scratch/rnagrx/jobs, 14 | job results of all services and their retention (optional; old names MISRA_JOB_DIR, MISRA_JOB_MAX_AGE_DAYS still read) |
 | FASTA_UPLOAD_MAX_MB | 50 | size limit of FASTA uploads in tool forms (optional; old name MISRA_UPLOAD_MAX_MB) |
+| UPLOAD_DIR, UPLOAD_MAX_GB, UPLOAD_SESSION_MAX_GB | /scratch/rnagrx/uploads, 10, 30 | read files uploaded in chunks (per file / per browser, not yet used by a job); UPLOAD_MAX_GB also limits downloads from links |
+| UPLOAD_CHUNK_MB, UPLOAD_MAX_AGE_HOURS, SCRATCH_MIN_FREE_GB | 16, 48, 100 | chunk size (keep far below Apache's LimitRequestBody, 1 GiB by default), unused uploads deleted after, uploads refused below this free space |
 | MISRA_CART_LIMIT | 100000 | optional |
 | MISRA_API_MATRIX_LIMIT, MISRA_API_DETAIL_LIMIT | 2000, 1000 | API: experiments per request (matrices / per-experiment details) |
 | MISRA_API_RATE_PER_MIN | 120 | API requests per minute and client address (0 = no limit) |
@@ -67,7 +69,9 @@ sudo supervisorctl status rnagrx_web rnagrx_celery
 After a code update: `sudo supervisorctl restart rnagrx_web rnagrx_celery`.
 Job results go to `JOB_DIR` (default `/scratch/rnagrx/jobs`) and are removed by `jobs_cleanup` after
 `JOB_MAX_AGE_DAYS` (14). Per-job limits: `MISRA_LIMIT_MATRIX`, `MISRA_LIMIT_DOWNLOAD`, `MISRA_LIMIT_SRNABENCH`.
-www-data needs write access to `/var/www/rnagrx/logs` and `/scratch/rnagrx/jobs` (group www-data, mode 2775).
+www-data needs write access to `/var/www/rnagrx/logs`, `/scratch/rnagrx/jobs` and `/scratch/rnagrx/uploads`
+(group www-data, mode 2775). `jobs_cleanup` also removes uploads that no job used within `UPLOAD_MAX_AGE_HOURS`.
+Downloads from user links (jobs/fetch.py) connect directly (no proxy) and only to public IP addresses.
 
 ## Apache (root)
 

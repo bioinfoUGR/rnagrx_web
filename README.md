@@ -17,7 +17,7 @@ sequencing experiments processed with sRNAbench) and the new **sRNAtoolbox** (in
 | `misra/engine.py` | in-memory column index: filtering, facet counts, paging |
 | `misra/indexer.py` | `manage.py misra_build_index` (nightly) |
 | `misra/views.py`, `query.py`, `cart.py` | browse, taxonomy, detail pages, cart and saved selections |
-| `jobs/` | job system shared by the services: Job model, tool registry, Celery task, job page and result files, cleanup |
+| `jobs/` | job system shared by the services: Job model, tool registry, Celery task, job page and result files, cleanup; chunked uploads (`uploads.py`), downloads from links (`fetch.py`), read file formats (`readfiles.py`) |
 | `misra/tools.py`, `forms.py`, `runners.py`, `views_tools.py` | miSRA tools (download, matrix, sRNAbench) registered with `jobs` |
 | `srnatoolbox/` | sRNAtoolbox at `/srnatoolbox/`: home, about/cite, tool pages (sRNAbench and sRNAde in progress) |
 | `misra/api/` | API v1 (`docs.py` describes the endpoints and drives the help page) |

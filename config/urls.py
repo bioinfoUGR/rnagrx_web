@@ -5,5 +5,6 @@ urlpatterns = [
     path("", include("core.urls")),
     path("misra/", include("misra.urls")),
     path("srnatoolbox/", include("srnatoolbox.urls")),
+    path("jobs/", include("jobs.urls")),
     path("admin/", admin.site.urls),
 ]

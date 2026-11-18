@@ -171,6 +171,13 @@ MISRA_PAGE_SIZE = 50
 JOB_DIR = Path(env.str("JOB_DIR", default=env.str("MISRA_JOB_DIR", default=str(SCRATCH_DIR / "jobs"))))
 JOB_MAX_AGE_DAYS = env.int("JOB_MAX_AGE_DAYS", default=env.int("MISRA_JOB_MAX_AGE_DAYS", default=14))
 FASTA_UPLOAD_MAX_MB = env.int("FASTA_UPLOAD_MAX_MB", default=env.int("MISRA_UPLOAD_MAX_MB", default=50))
+# Read files uploaded in chunks from the browser (jobs/uploads.py) or downloaded from links (jobs/fetch.py)
+UPLOAD_DIR = Path(env.str("UPLOAD_DIR", default=str(SCRATCH_DIR / "uploads")))
+UPLOAD_MAX_GB = env.int("UPLOAD_MAX_GB", default=10)  # per file (also for links)
+UPLOAD_SESSION_MAX_GB = env.int("UPLOAD_SESSION_MAX_GB", default=30)  # uploads of one browser not yet used by a job
+UPLOAD_CHUNK_MB = env.int("UPLOAD_CHUNK_MB", default=16)
+UPLOAD_MAX_AGE_HOURS = env.int("UPLOAD_MAX_AGE_HOURS", default=48)  # unused uploads are deleted after this
+SCRATCH_MIN_FREE_GB = env.int("SCRATCH_MIN_FREE_GB", default=100)  # refuse uploads below this free space
 
 # miSRA tools: max experiments per job, sRNAbench resources
 MISRA_LIMIT_MATRIX = env.int("MISRA_LIMIT_MATRIX", default=20_000)

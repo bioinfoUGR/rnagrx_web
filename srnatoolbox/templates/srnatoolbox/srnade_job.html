@@ -1,0 +1,20 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% load static %}
+{% block page_title %}sRNAde job {{ job.slug }}{% endblock %}
+{% block srnatoolbox_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">{{ job.inputs.dataset_title }} · {% if bench %}<a href="{{ bench.get_absolute_url }}">sRNAbench job {{ bench.slug }}</a>{% else %}sRNAbench job {{ job.inputs.parent }}{% endif %} · sRNAde job</p>
+    <h1 class="h3">{{ tool.title }}</h1>
+    <p class="small text-secondary mb-0">Job <code>{{ job.slug }}</code> · started {{ job.created_at|date:"j F Y, H:i" }}{% if job.finished_at and job.started_at %} · finished after {{ job.started_at|timesince:job.finished_at }}{% endif %}
+      · bookmark this page; results are kept for {{ max_age_days }} days.</p>
+  </div>
+  {% if rerun_url %}<div><a class="btn btn-outline-primary" href="{{ rerun_url }}">Run again with other samples or settings</a></div>{% endif %}
+</section>
+<div id="job-status">{% include "srnatoolbox/_srnade_status.html" %}</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'vendor/plotly/plotly.min.js' %}"></script>
+<script src="{% static 'srnatoolbox/results.js' %}"></script>
+<script src="{% static 'srnatoolbox/srnade_results.js' %}"></script>
+{% endblock %}

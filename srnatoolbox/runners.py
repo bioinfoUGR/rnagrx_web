@@ -5,11 +5,13 @@ import csv
 import shutil
 from pathlib import Path
 
+import pandas as pd
 from django.conf import settings
 
 from jobs.commands import run_command, srnatoolbox_command
 from jobs.models import DataFile, Dataset
 
+from .de import DE_DIR, build_de_summary, parent_of
 from .summary import build_summary
 
 INPUT_DIR = "input"
@@ -122,5 +124,55 @@ def run_srnabench(job, directory: Path, log) -> list[dict]:
     return build_summary(job, directory, log)
 
 
+# ---------------------------------------------------------------------------
+# sRNAde
+
+META_COLUMNS = ["file", "name", "filepath", "results", "parameters"]
+
+
+def write_de_input(job, parent, directory: Path) -> Path:
+    """The parent's meta_results.csv, reduced to the job's samples and its one annotation column."""
+    column = job.params["column"]
+    groups = {s["name"]: s["group"] for s in job.inputs["samples"]}
+    meta = pd.read_csv(parent.directory() / BENCH_DIR / "meta_results.csv", dtype=str, keep_default_na=False)
+    meta = meta[meta["name"].isin(groups)]
+    missing = set(groups) - set(meta["name"])
+    if missing:
+        raise ValueError(f"No sRNAbench results for {', '.join(sorted(missing))}.")
+    out = meta[[c for c in META_COLUMNS if c in meta.columns]].copy()
+    out[column] = out["name"].map(groups)
+    target = directory / "de_input.csv"
+    out.to_csv(target, index=False)
+    return target
+
+
+def srnade_command(job) -> list:
+    p = job.params
+    de, _ = srnatoolbox_command("sRNAde")
+    cmd = [de, "diffexpr", "-i", "de_input.csv", "-o", DE_DIR, "--silent", "--graphics_no",
+           "--library_type", p["library_type"], "--annotation", p["column"], "--de_type", p["count_type"],
+           "--filter_mode", p["filter_mode"], "--min_rc", p["min_rc"], "--min_rpm", p["min_rpm"],
+           "--fdr_threshold", p["fdr"], "--log2fc_threshold", p["log2fc"]]
+    if p["method"] != "all":
+        cmd += ["--de_method", p["method"]]
+    return cmd
+
+
 def run_srnade(job, directory: Path, log) -> list[dict]:
-    raise NotImplementedError("sRNAde is not available yet.")
+    parent = parent_of(job)
+    counts = {}
+    for s in job.inputs["samples"]:
+        counts[s["group"]] = counts.get(s["group"], 0) + 1
+    log(f"sRNAde on {job.n_items} samples of sRNAbench job {parent.slug}: "
+        + ", ".join(f"{g} {n}" for g, n in sorted(counts.items())))
+    write_de_input(job, parent, directory)
+    link = directory / BENCH_DIR
+    if link.is_symlink() or link.exists():
+        link.unlink()
+    link.symlink_to(parent.directory() / BENCH_DIR, target_is_directory=True)
+    _, env = srnatoolbox_command("sRNAde")
+    try:
+        run_command(srnade_command(job), directory, env, log, "srnade.log", settings.SRNATOOLBOX_TIMEOUT_HOURS)
+    finally:
+        link.unlink(missing_ok=True)
+    return build_de_summary(job, directory, log)

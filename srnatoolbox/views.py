@@ -53,6 +53,9 @@ def tool_view(request, key):
     if key == "srnabench":
         from .views_bench import srnabench_view
         return srnabench_view(request)
+    if key == "srnade":
+        from .views_de import srnade_start
+        return srnade_start(request)
     # the forms come with the tools themselves (phase 5/6); until then the page says "coming soon"
     selection = None
     ds = Dataset.objects.filter(slug=request.GET.get("dataset", ""), deleted_at__isnull=True).first()

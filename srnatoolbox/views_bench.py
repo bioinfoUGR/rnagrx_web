@@ -149,11 +149,15 @@ def _rerun_url(job: Job) -> str:
 
 def job_view(request, slug):
     job = get_object_or_404(Job, slug=slug, app="srnatoolbox")
+    if job.tool == "srnade":
+        from .views_de import srnade_job_view
+        return srnade_job_view(request, job)
     if job.tool != "srnabench":
         return generic_job_view(request, slug, app="srnatoolbox")
     remember_job(request, job)
     context = {**status_context(job), "settings_rows": settings_rows(job), "rerun_url": _rerun_url(job),
-               "dataset": Dataset.objects.filter(slug=job.inputs.get("dataset", "")).first()}
+               "dataset": Dataset.objects.filter(slug=job.inputs.get("dataset", "")).first(),
+               "de_jobs": job.children.filter(tool="srnade").order_by("-id")}
     if job.is_active:
         context["progress"] = progress(job)
     if job.status == Job.DONE:

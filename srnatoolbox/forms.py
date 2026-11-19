@@ -118,3 +118,101 @@ class SrnabenchForm(forms.Form):
             if d.get(name):
                 p[f"{name}_file"] = d[name].describe(d[name].filename)
         return p
+
+
+# ---------------------------------------------------------------------------
+# sRNAde: differential expression between groups of samples of one finished sRNAbench job
+
+LIBRARY_TYPES = [
+    ("mirna", "microRNAs"),
+    ("trna", "tRNAs"),
+    ("libs", "Other RNA classes (genome annotation, own reference sequences)"),
+]
+LIBRARY_LABELS = dict(LIBRARY_TYPES)
+DE_METHODS = [
+    ("all", "DESeq2, edgeR and limma (consensus)"),
+    ("DESeq2", "DESeq2"),
+    ("edgeR", "edgeR"),
+    ("limma", "limma-voom"),
+]
+DE_METHOD_LABELS = dict(DE_METHODS)
+COUNT_TYPES = [
+    ("rcadj", "Multi-mapping reads shared out between their references"),
+    ("rcsa", "Multi-mapping reads assigned to the most expressed reference (slower)"),
+    ("all", "Both, as separate analyses"),
+]
+COUNT_LABELS = dict(COUNT_TYPES)
+FILTER_MODES = [
+    ("min_per_group", "All samples of at least one group reach the threshold"),
+    ("simple_mean", "The mean over all samples reaches the threshold"),
+    ("fraction", "Most samples are above zero"),
+]
+FILTER_LABELS = dict(FILTER_MODES)
+
+
+def _float(label, initial, min_value, max_value, step):
+    return forms.FloatField(label=label, initial=initial, min_value=min_value, max_value=max_value,
+                            widget=forms.NumberInput(attrs={"class": "form-control", "step": step}))
+
+
+class SrnadeForm(forms.Form):
+    """Samples and settings of an sRNAde run. `parent` (srnatoolbox.de.Parent) gives the samples of the
+    sRNAbench job, their annotations and the RNA types it profiled."""
+
+    column = forms.ChoiceField(label="Compare by", widget=forms.Select(attrs={"class": "form-select"}))
+    groups = forms.MultipleChoiceField(label="Groups", widget=forms.CheckboxSelectMultiple,
+                                       error_messages={"required": "Select at least two groups."})
+    samples = forms.MultipleChoiceField(error_messages={"required": "Select the samples to compare."})
+    library_type = forms.ChoiceField(label="RNA type", choices=LIBRARY_TYPES, initial="mirna",
+                                     widget=forms.RadioSelect)
+    method = forms.ChoiceField(label="Method", choices=DE_METHODS, initial="all",
+                               widget=forms.Select(attrs={"class": "form-select"}))
+    fdr = _float("FDR below", 0.05, 0.0001, 0.5, "0.01")
+    log2fc = _float("|log2 fold change| at least", 1.0, 0, 10, "0.1")
+    # advanced
+    count_type = forms.ChoiceField(label="Reads mapping to several references", choices=COUNT_TYPES,
+                                   initial="rcadj", widget=forms.Select(attrs={"class": "form-select"}))
+    filter_mode = forms.ChoiceField(label="Expression filter", choices=FILTER_MODES, initial="min_per_group",
+                                    widget=forms.Select(attrs={"class": "form-select"}))
+    min_rc = _float("Min. read count", 1, 0, 10000, "1")
+    min_rpm = _float("Min. RPM", 1, 0, 10000, "0.1")
+
+    def __init__(self, *args, parent, column: str = "", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.parent = parent
+        self.fields["column"].choices = [(c, c) for c in parent.columns]
+        col = self.data.get("column") if self.is_bound else (column or self.initial.get("column"))
+        if col not in parent.columns:
+            col = parent.columns[0] if parent.columns else ""
+        self.column = col
+        self.fields["column"].initial = col
+        self.fields["groups"].choices = [(g, g) for g, _ in parent.groups(col)]
+        self.fields["samples"].choices = [(s["name"], s["name"]) for s in parent.samples]
+        self.fields["library_type"].choices = [c for c in LIBRARY_TYPES if c[0] in parent.library_types]
+
+    def clean(self):
+        data = super().clean()
+        col = data.get("column")
+        groups = set(data.get("groups") or [])
+        chosen = set(data.get("samples") or [])
+        if not col:
+            return data
+        kept = [(s["name"], s["annotations"].get(col, "")) for s in self.parent.samples
+                if s["name"] in chosen and s["annotations"].get(col, "") in groups]
+        counts: dict[str, int] = {}
+        for _, g in kept:
+            counts[g] = counts.get(g, 0) + 1
+        if len(counts) < 2:
+            raise forms.ValidationError("Select samples of at least two groups.")
+        from django.conf import settings
+        if len(kept) > settings.SRNABENCH_MAX_SAMPLES:
+            raise forms.ValidationError(f"Up to {settings.SRNABENCH_MAX_SAMPLES} samples per comparison.")
+        data["kept"] = kept
+        data["counts"] = counts
+        return data
+
+    def params(self) -> dict:
+        d = self.cleaned_data
+        return {"column": d["column"], "groups": sorted(d["counts"]), "library_type": d["library_type"],
+                "method": d["method"], "fdr": d["fdr"], "log2fc": d["log2fc"], "count_type": d["count_type"],
+                "filter_mode": d["filter_mode"], "min_rc": d["min_rc"], "min_rpm": d["min_rpm"]}

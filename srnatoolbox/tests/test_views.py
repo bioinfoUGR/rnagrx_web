@@ -9,7 +9,7 @@ class PageTests(TestCase):
         r = self.client.get(reverse("srnatoolbox:home"))
         self.assertContains(r, "sRNAbench")
         self.assertContains(r, "sRNAde")
-        self.assertContains(r, "coming soon")
+        self.assertNotContains(r, "coming soon")  # both tools of the first release are enabled
         self.assertContains(r, "sRNAblast")  # planned tools
         self.assertContains(r, "https://arn.ugr.es/srnatoolbox/")
 
@@ -19,7 +19,8 @@ class PageTests(TestCase):
 
     def test_tool_pages(self):
         self.assertContains(self.client.get(reverse("srnatoolbox:tool", args=["srnabench"])), "starts from a dataset")
-        self.assertContains(self.client.get(reverse("srnatoolbox:tool", args=["srnade"])), "coming soon")
+        self.assertContains(self.client.get(reverse("srnatoolbox:tool", args=["srnade"])),
+                            "starts from a finished sRNAbench job")
         self.assertEqual(self.client.get(reverse("srnatoolbox:tool", args=["nope"])).status_code, 404)
 
     def test_landing_links_both_services(self):

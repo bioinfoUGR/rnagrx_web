@@ -25,8 +25,9 @@ class Command(BaseCommand):
             .update(status=Job.FAILED, message="The job was interrupted. Please submit it again.", finished_at=now)
 
         n_jobs = 0
+        # a job whose results a running job reads (sRNAde on sRNAbench) is kept until that job ends
         old = Job.objects.filter(created_at__lt=now - timedelta(days=settings.JOB_MAX_AGE_DAYS)) \
-            .exclude(status=Job.EXPIRED)
+            .exclude(status=Job.EXPIRED).exclude(children__status__in=[Job.QUEUED, Job.RUNNING])
         for job in old:
             shutil.rmtree(job.directory(), ignore_errors=True)
             job.status = Job.EXPIRED

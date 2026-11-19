@@ -1,0 +1,22 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% block page_title %}{{ tool.label }}{% endblock %}
+{% block srnatoolbox_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow"><a href="{% url 'srnatoolbox:home' %}">Tools</a></p>
+    <h1 class="h3">{{ tool.title }}</h1>
+    <p class="text-secondary mb-0 prose">{{ tool.description }}</p>
+  </div>
+</section>
+<div class="no-results">
+  <h2 class="h5">sRNAde starts from a finished sRNAbench job</h2>
+  <p>Profile your samples with sRNAbench first. On the page of the finished job, “Differential expression with
+    sRNAde” lets you choose the groups and samples to compare; you can run sRNAde as often as you like on the same job.</p>
+  {% if jobs %}
+  <p class="mb-2">Finished sRNAbench jobs opened in this browser:</p>
+  <ul class="list-unstyled">{% for j in jobs %}<li><a href="{% url 'srnatoolbox:srnade' j.slug %}">{{ j.inputs.dataset_title|default:j.slug }}</a>
+    <span class="small text-secondary">· job {{ j.slug }} · {{ j.n_items }} sample{{ j.n_items|pluralize }} · {{ j.created_at|date:"j M Y H:i" }}</span></li>{% endfor %}</ul>
+  {% endif %}
+  <a class="btn btn-primary mt-2" href="{% url 'srnatoolbox:tool' 'srnabench' %}">Go to sRNAbench</a>
+</div>
+{% endblock %}

@@ -2,7 +2,7 @@ from django.urls import path
 
 from jobs import views as job_views
 
-from . import views, views_bench, views_data
+from . import views, views_bench, views_data, views_de
 
 app_name = "srnatoolbox"
 urlpatterns = [
@@ -15,6 +15,9 @@ urlpatterns = [
     path("job/<str:slug>/sample/<str:name>/", views_bench.sample_view, name="job_sample"),
     path("job/<str:slug>/sample/<str:name>/zip/", views_bench.sample_zip, name="job_sample_zip"),
     path("job/<str:slug>/sample/<str:name>/file/<path:path>", views_bench.sample_file, name="job_sample_file"),
+    path("job/<str:slug>/de/", views_de.srnade_view, name="srnade"),
+    path("job/<str:slug>/de/pca/", views_de.srnade_pca, name="srnade_pca"),
+    path("job/<str:slug>/de/file/<path:path>", views_de.de_file, name="de_file"),
     # datasets
     path("data/", views_data.data_home, name="data"),
     path("data/new/", views_data.data_new, name="data_new"),

@@ -1,0 +1,25 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% block page_title %}{{ tool.label }}{% endblock %}
+{% block srnatoolbox_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow"><a href="{{ bench.get_absolute_url }}">sRNAbench job {{ bench.slug }}</a></p>
+    <h1 class="h3">{{ tool.title }}</h1>
+  </div>
+</section>
+<div class="no-results">
+  {% if bench.status != "done" %}
+  <h2 class="h5">The sRNAbench job is {{ bench.get_status_display }}</h2>
+  <p>sRNAde needs the results of a finished sRNAbench job.{% if bench.is_active %} Come back when it has finished.{% endif %}</p>
+  {% elif parent.samples|length < 2 %}
+  <h2 class="h5">Not enough samples</h2>
+  <p>sRNAde compares groups of samples; this job has {{ parent.samples|length }} sample{{ parent.samples|length|pluralize }} with results.</p>
+  {% else %}
+  <h2 class="h5">The samples have no annotation</h2>
+  <p>sRNAde compares groups defined by a column of the sample sheet (for example “group” with the values tumour and control).
+    {% if parent.dataset %}Add a column on the <a href="{{ parent.dataset.get_absolute_url }}">dataset page</a> (or upload a sample sheet there), then come back to this page; the profiling does not need to run again.
+    {% else %}The dataset of this job was deleted, so annotations cannot be added any more.{% endif %}</p>
+  {% endif %}
+  <a class="btn btn-outline-primary" href="{{ bench.get_absolute_url }}">Back to the sRNAbench job</a>
+</div>
+{% endblock %}

@@ -114,6 +114,19 @@ class CleanupTests(TestCase):
         self.assertEqual(stuck.status, Job.FAILED)
         self.assertEqual(fresh.status, Job.DONE)
 
+    def test_parent_kept_while_child_runs(self):
+        parent = Job.objects.create(app="srnatoolbox", tool="srnabench", status=Job.DONE)
+        child = Job.objects.create(app="srnatoolbox", tool="srnade", status=Job.RUNNING, parent=parent)
+        Job.objects.filter(pk=parent.pk).update(created_at=timezone.now() - timedelta(days=15))
+        call_command("jobs_cleanup", stdout=io.StringIO())
+        parent.refresh_from_db()
+        self.assertEqual(parent.status, Job.DONE)
+        child.status = Job.DONE
+        child.save()
+        call_command("jobs_cleanup", stdout=io.StringIO())
+        parent.refresh_from_db()
+        self.assertEqual(parent.status, Job.EXPIRED)
+
 
 class CopyMisraJobsMigrationTests(TransactionTestCase):
     """jobs 0002 copies misra_job rows with id, slug and creation time."""

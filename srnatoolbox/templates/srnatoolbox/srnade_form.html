@@ -1,0 +1,143 @@
+{% extends "srnatoolbox/base_srnatoolbox.html" %}
+{% load humanize static %}
+{% block page_title %}{{ tool.label }}{% endblock %}
+{% block srnatoolbox_content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">{% if parent.dataset %}<a href="{{ parent.dataset.get_absolute_url }}">{{ parent.dataset.title }}</a>{% else %}{{ bench.inputs.dataset_title }}{% endif %}
+      · <a href="{{ bench.get_absolute_url }}">sRNAbench job {{ bench.slug }}</a> · new sRNAde job</p>
+    <h1 class="h3">{{ tool.title }}</h1>
+    <p class="text-secondary mb-0 prose">Compares the expression of microRNAs (or other small RNAs) between groups of
+      samples of one sRNAbench job. Leave out outliers and run again as often as you like; the profiling is not repeated.</p>
+  </div>
+</section>
+
+<form method="post" id="srnade-form" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }} {% endfor %}</div>{% endif %}
+
+  <section class="card"><div class="card-body">
+    <h2 class="h5">1. Groups</h2>
+    <div class="row g-3 align-items-start">
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold" for="{{ form.column.id_for_label }}">{{ form.column.label }}</label>
+        <select name="column" id="{{ form.column.id_for_label }}" class="form-select" data-reload="?{% if request.GET.from %}from={{ request.GET.from|urlencode }}&amp;{% endif %}column=">
+          {% for c in parent.columns %}<option value="{{ c }}" {% if c == column %}selected{% endif %}>{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      <fieldset class="col-md-8">
+        <legend class="form-label small fw-semibold mb-1">Groups to include <span class="fw-normal text-secondary">(every pair of included groups is compared)</span></legend>
+        <div id="group-boxes">
+          {% for g, n in groups %}
+          <div class="form-check form-check-inline me-4">
+            <input class="form-check-input" type="checkbox" name="groups" value="{{ g }}" id="group-{{ forloop.counter }}" {% if g in groups_on %}checked{% endif %}>
+            <label class="form-check-label" for="group-{{ forloop.counter }}">{{ g }} <span class="text-secondary">({{ n }})</span></label>
+          </div>
+          {% empty %}<p class="text-danger small mb-0">No sample has a value in the column {{ column }}.</p>{% endfor %}
+        </div>
+        {% for e in form.groups.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+      </fieldset>
+    </div>
+    <p class="form-text mb-0">Columns come from the sample sheet of the dataset{% if parent.dataset %}; edit annotations or upload a new
+      sheet on the <a href="{{ parent.dataset.get_absolute_url }}">dataset page</a>, then reload this page{% endif %}.
+      Samples without a value in the chosen column are not used.</p>
+  </div></section>
+
+  <section class="card mt-3"><div class="card-body">
+    <h2 class="h5">2. Samples</h2>
+    <p class="small text-secondary">Untick samples to leave them out. Quality values from the sRNAbench job help to find outliers.</p>
+    <div class="row g-4">
+      <div class="col-xl-7">
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-2 small">
+          <span id="sample-count" class="fw-semibold"></span>
+          <span class="text-secondary">·</span>
+          <button type="button" class="btn btn-link btn-sm p-0" data-select="all">all</button>
+          <span class="text-secondary">·</span>
+          <button type="button" class="btn btn-link btn-sm p-0" data-select="unflag">untick flagged</button>
+          <input type="search" class="form-control form-control-sm ms-auto table-filter" style="max-width: 14rem" placeholder="Filter samples" data-table="de-samples" aria-label="Filter samples">
+        </div>
+        <div class="table-responsive de-sample-table">
+          <table class="table table-sm align-middle sortable mb-0" id="de-samples">
+            <thead><tr><th scope="col"><span class="visually-hidden">Use</span></th><th scope="col" data-sort="text">Sample</th><th scope="col" data-sort="text">{{ column }}</th>
+              <th scope="col" class="text-end" data-sort="num">In analysis</th><th scope="col" class="text-end" data-sort="num">microRNA</th><th scope="col" data-sort="text">Note</th></tr></thead>
+            <tbody>
+            {% for r in rows %}
+              <tr data-name="{{ r.name }}" data-group="{{ r.group }}" {% if r.flags %}data-flagged="1"{% endif %}>
+                <td><input class="form-check-input" type="checkbox" name="samples" value="{{ r.name }}" aria-label="Use {{ r.name }}" {% if r.checked and r.usable %}checked{% endif %} {% if not r.usable %}disabled{% endif %}></td>
+                <td><a href="{% url 'srnatoolbox:job_sample' bench.slug r.name %}">{{ r.name }}</a></td>
+                <td>{{ r.group|default:"—" }}</td>
+                <td class="text-end" data-value="{{ r.reads }}">{{ r.reads|intcomma }}</td>
+                <td class="text-end" data-value="{{ r.mirna_pct }}">{{ r.mirna_pct|floatformat:1 }} %</td>
+                <td class="small {% if r.flags %}text-warning-emphasis{% endif %}">{% if not r.usable %}<span class="text-secondary">no value in {{ column }}</span>{% else %}{{ r.flags|join:", " }}{% endif %}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if parent.failed %}<p class="small text-secondary mt-2 mb-0">{{ parent.failed|join:", " }} failed in sRNAbench and {{ parent.failed|length|pluralize:"is,are" }} not listed.</p>{% endif %}
+        {% for e in form.samples.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+      </div>
+      <div class="col-xl-5">
+        {% if has_pca %}
+        <div class="chart" id="chart-pca" style="height: 340px" role="img" aria-label="PCA of the selected samples"></div>
+        <p class="small text-secondary mb-0">PCA of the ticked samples (log RPM of the most variable microRNAs);
+          left-out samples are projected onto it as open circles.</p>
+        {% else %}<p class="small text-secondary">No microRNA expression matrix in the sRNAbench job, so no PCA.</p>{% endif %}
+      </div>
+    </div>
+  </div></section>
+
+  <section class="card mt-3"><div class="card-body">
+    <h2 class="h5">3. Analysis</h2>
+    <div class="row g-3">
+      <fieldset class="col-lg-5">
+        <legend class="form-label small fw-semibold mb-1">{{ form.library_type.label }}</legend>
+        {% for radio in form.library_type %}
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="{{ radio.data.name }}" id="{{ radio.id_for_label }}" value="{{ radio.data.value }}" {% if radio.data.selected %}checked{% endif %}>
+          <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+        </div>
+        {% endfor %}
+        {% for e in form.library_type.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+      </fieldset>
+      {% include "srnatoolbox/_field.html" with f=form.method col="col-lg-3" %}
+      {% include "srnatoolbox/_field.html" with f=form.fdr col="col-6 col-lg-2" %}
+      {% include "srnatoolbox/_field.html" with f=form.log2fc col="col-6 col-lg-2" %}
+    </div>
+    <details class="mt-3">
+      <summary class="fw-semibold text-primary">Advanced options</summary>
+      <div class="row g-3 mt-1">
+        {% include "srnatoolbox/_field.html" with f=form.count_type col="col-lg-6" %}
+        {% include "srnatoolbox/_field.html" with f=form.filter_mode col="col-lg-6" %}
+        {% include "srnatoolbox/_field.html" with f=form.min_rc col="col-6 col-lg-3" %}
+        {% include "srnatoolbox/_field.html" with f=form.min_rpm col="col-6 col-lg-3" %}
+      </div>
+      <p class="form-text">References below the expression filter are not tested. Groups with a single sample give fold
+        changes only (no p-values). Other options keep the defaults of the sRNAde command-line tool.</p>
+    </details>
+    {% if previous %}
+    <div class="mt-3" style="max-width: 32rem">
+      <label class="form-label small fw-semibold mb-1" for="copy-from">Start from an earlier sRNAde job on these samples <span class="fw-normal text-secondary">(optional)</span></label>
+      <select id="copy-from" class="form-select" data-base="?">
+        <option value="">Default settings, all samples</option>
+        {% for j in previous %}<option value="{{ j.slug }}" {% if j.slug == request.GET.from %}selected{% endif %}>{{ j.slug }} · {{ j.params.column }} · {{ j.n_items }} samples · {{ j.created_at|date:"j M H:i" }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+  </div></section>
+
+  <div class="action-bar">
+    <div>
+      <div class="fw-semibold" id="de-summary">&nbsp;</div>
+      <div class="small text-secondary">Takes a few minutes. Results are kept for {{ max_age_days }} days.</div>
+    </div>
+    <button class="btn btn-primary" type="submit" id="de-submit">Start sRNAde</button>
+  </div>
+</form>
+{{ page_data|json_script:"de-page-data" }}
+{% endblock %}
+{% block scripts %}
+{% if has_pca %}<script src="{% static 'vendor/plotly/plotly.min.js' %}"></script>{% endif %}
+<script src="{% static 'srnatoolbox/results.js' %}"></script>
+<script src="{% static 'srnatoolbox/srnade.js' %}"></script>
+{% endblock %}

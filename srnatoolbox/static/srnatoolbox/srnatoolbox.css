@@ -54,3 +54,14 @@ table.sortable th[data-dir="desc"]::after { content: " ▼"; font-size: .7em; }
 .chart { width: 100%; min-height: 160px; }
 .chart-short { min-height: 140px; }
 .file-list { max-height: 32rem; overflow-y: auto; }
+
+/* sRNAde */
+.de-sample-table { max-height: 26rem; overflow-y: auto; }
+.de-sample-table thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
+#de-samples tr.row-off > td { opacity: .45; }
+#de-samples tr[data-flagged] > td { background: #fff8e6; }
+.de-table-wrap { max-height: 36rem; overflow-y: auto; }
+.de-table-wrap thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
+#de-table tr.row-sig > td:first-child { font-weight: 600; }
+.sig-mark { color: #3b444d; }
+#de-tiles { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }

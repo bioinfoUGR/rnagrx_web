@@ -1,0 +1,63 @@
+<ul class="nav nav-tabs mt-4" role="tablist">
+  <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-de" type="button" role="tab">Differential expression</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-files" type="button" role="tab">Files</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-log" type="button" role="tab">Log</button></li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="tab-de" role="tabpanel">
+    <div class="d-flex flex-wrap gap-3 align-items-end mt-3" id="de-controls">
+      <div><label class="form-label small fw-semibold mb-1" for="de-comparison">Comparison</label>
+        <select class="form-select" id="de-comparison"></select></div>
+      <div><label class="form-label small fw-semibold mb-1" for="de-method">Table and volcano plot from</label>
+        <select class="form-select" id="de-method"></select></div>
+      <p class="small text-secondary mb-1">Significant: FDR &lt; {{ de.fdr }} and |log2 fold change| ≥ {{ de.log2fc }}.</p>
+    </div>
+    <div class="alert alert-warning mt-3 mb-0" id="de-nostats" hidden>A group of this comparison has a single sample, so
+      sRNAde gives fold changes only (no p-values). Add replicates for a statistical test.</div>
+    <div class="kv-tiles mt-3" id="de-tiles"></div>
+
+    <div class="row g-3 mt-0">
+      <div class="col-lg-6"><section class="card h-100"><div class="card-body">
+        <h2 class="h5 mb-1">Volcano plot</h2><p class="small text-secondary" id="volcano-note">log2 fold change against −log10 p-value; hover for the name.</p>
+        <div id="chart-volcano" class="chart" style="height: 380px" role="img" aria-label="Volcano plot"></div>
+      </div></section></div>
+      <div class="col-lg-6"><section class="card h-100"><div class="card-body">
+        <h2 class="h5 mb-1">Heatmap</h2><p class="small text-secondary" id="heatmap-note">z-score of log2 CPM per sample.</p>
+        <div id="chart-heatmap" class="chart" style="height: 380px" role="img" aria-label="Heatmap of the top differentially expressed references"></div>
+      </div></section></div>
+    </div>
+
+    <section class="card mt-3"><div class="card-body">
+      <div class="d-flex flex-wrap gap-2 justify-content-between align-items-end">
+        <div><h2 class="h5 mb-1">Results table</h2>
+          <p class="small text-secondary mb-0" id="table-note"></p></div>
+        <div class="d-flex gap-2 align-items-center">
+          <input class="form-control form-control-sm table-filter" type="search" placeholder="Filter" aria-label="Filter the results table" data-table="de-table">
+          <a class="btn btn-sm btn-outline-primary text-nowrap" id="de-download" href="#" data-base="{% url 'srnatoolbox:de_file' job.slug '__' %}">Full table (TSV)</a>
+        </div>
+      </div>
+      <div class="table-responsive mt-2 de-table-wrap">
+        <table class="table table-sm results-table sortable" id="de-table">
+          <thead><tr><th data-sort="text">Name</th><th class="num" data-sort="num" id="th-mean-a">Mean A</th><th class="num" data-sort="num" id="th-mean-b">Mean B</th>
+            <th class="num" data-sort="num">log2 FC</th><th class="num" data-sort="num">p-value</th><th class="num" data-sort="num">FDR</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div></section>
+  </div>
+
+  <div class="tab-pane fade" id="tab-files" role="tabpanel">
+    <section class="card mt-3"><div class="card-body">
+      <h2 class="h5">Downloads</h2>
+      <ul class="list-unstyled mb-3">{% for r in job.results %}<li class="mb-1"><a href="{% url 'srnatoolbox:job_file' job.slug r.name %}">{{ r.name }}</a> <span class="small text-secondary">· {{ r.label }}</span></li>{% endfor %}</ul>
+      <h3 class="h6">DE tables</h3>
+      <ul class="list-unstyled small mb-0">{% for a in de.analyses %}<li><a href="{% url 'srnatoolbox:de_file' job.slug a.file|slice:'3:' %}">{{ a.method }} · {{ a.a }} vs {{ a.b }}</a>
+        <span class="text-secondary">· {{ a.library }} {{ a.reference }} · {{ a.count_type }} · {{ a.tested }} tested, {{ a.up }} up, {{ a.down }} down</span></li>{% endfor %}</ul>
+    </div></section>
+  </div>
+  <div class="tab-pane fade" id="tab-log" role="tabpanel">
+    <pre class="job-log mt-3">{{ log }}</pre>
+  </div>
+</div>
+{{ de|json_script:"de-data" }}
+{{ job.slug|json_script:"de-job" }}

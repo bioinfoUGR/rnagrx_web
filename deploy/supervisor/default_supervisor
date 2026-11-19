@@ -1,0 +1,30 @@
+# Defaults for supervisor initscript
+# sourced by /etc/init.d/supervisor
+# installed at /etc/default/supervisor by the maintainer scripts
+
+#
+# This is a POSIX shell fragment
+#
+
+# Additional options that are passed to the Daemon.
+DAEMON_OPTS=""
+
+# rnagrx (deploy/supervisor/default_supervisor): wait for the GlusterFS mounts before starting.
+# /var/www (rnagrx) and /srv (miRgrx) are FUSE mounts that can finish after supervisor's boot slot
+# (rc2.d/S02supervisor). supervisord refuses to start when a program's log directory does not exist yet,
+# and then none of the programs run (2026-11-19 reboot of the dev container). Waits at most 3 minutes;
+# only on start/restart, so stop and status are not delayed.
+case "$1" in
+  start|restart|force-reload)
+    _waited=0
+    while [ "$_waited" -lt 180 ]; do
+        if mountpoint -q /var/www && mountpoint -q /srv && [ -d /var/www/rnagrx/logs ]; then
+            break
+        fi
+        sleep 1
+        _waited=$((_waited + 1))
+    done
+    [ "$_waited" -gt 0 ] && echo "supervisor: waited ${_waited}s for /var/www and /srv"
+    unset _waited
+    ;;
+esac

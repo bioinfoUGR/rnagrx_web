@@ -70,6 +70,20 @@ sudo supervisorctl status rnagrx_web rnagrx_celery rnagrx_celery_transfer
 ```
 
 After a code update: `sudo supervisorctl restart rnagrx_web rnagrx_celery rnagrx_celery_transfer`.
+
+### Start after a reboot
+
+The container has no systemd: supervisor is started by sysvinit (`/etc/rc2.d/S02supervisor`), at the same time
+as the GlusterFS mounts (`/var/www`, `/srv`). If `/var/www/rnagrx/logs` is not there yet, supervisord exits at
+once (nothing in its log) and gunicorn and Celery stay down. `default_supervisor` makes the init script wait
+for the mounts (up to 3 minutes); install it once:
+
+```
+sudo cp /var/www/rnagrx/app/deploy/supervisor/default_supervisor /etc/default/supervisor
+```
+
+If the services are down after a reboot anyway: `sudo /etc/init.d/supervisor start` (no `systemctl` here),
+then `sudo supervisorctl status`.
 Job results go to `JOB_DIR` (default `/scratch/rnagrx/jobs`) and are removed by `jobs_cleanup` after
 `JOB_MAX_AGE_DAYS` (14). Per-job limits: `MISRA_LIMIT_MATRIX`, `MISRA_LIMIT_DOWNLOAD`, `MISRA_LIMIT_SRNABENCH`.
 www-data needs write access to `/var/www/rnagrx/logs`, `/scratch/rnagrx/jobs`, `/scratch/rnagrx/uploads` and
